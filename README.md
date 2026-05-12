@@ -1,62 +1,96 @@
-<p align="center">
-  <img src="docs/icon.png" alt="KeepAwake" width="128" />
-</p>
+# KeepAwake
 
-<h1 align="center">KeepAwake</h1>
+KeepAwake is a native macOS menu bar app that prevents Jamf-managed screen lock by simulating user activity. It reads MDM screensaver policies and power management timers, then sends invisible keypresses at the optimal interval so your screen never locks while you're in the zone.
 
-<p align="center">
-  A native macOS menu bar app that prevents Jamf-managed screen lock by simulating user activity.
-</p>
+![KeepAwake menu bar](docs/icon.png)
+
+Tools like `caffeinate`, Amphetamine, and KeepingYouAwake only prevent **system sleep** via IOKit assertions. They do **not** stop the **screensaver lock** enforced by Jamf configuration profiles. KeepAwake simulates a real `fn` keypress via System Events, which resets the `HIDIdleTime` counter that the screensaver daemon actually monitors.
 
 ## Install
 
-**Homebrew:**
+Homebrew is the recommended install path:
+
 ```bash
 brew install --cask yashiels/tap/keepawake
 ```
 
-**DMG:** Download from [Releases](https://github.com/yashiels/keep-awake/releases), open the DMG, drag KeepAwake to Applications.
+Direct downloads are available from the [latest GitHub release](https://github.com/yashiels/keep-awake/releases/latest).
 
-**Build from source:**
+Build from source:
+
 ```bash
 make run        # build and launch
 make install    # copy to /Applications
 make dmg        # create DMG installer
 ```
 
-## Why
+## What It Does
 
-`caffeinate`, Amphetamine, and KeepingYouAwake only prevent **system/display sleep** via IOKit assertions. They do **not** prevent the **screensaver lock** enforced by Jamf configuration profiles. KeepAwake simulates actual user input (`fn` keypress), which resets the `HIDIdleTime` counter that the screensaver daemon monitors.
+KeepAwake's menu bar shows live status and adapts automatically:
 
-## Features
+- Sun icon when active, moon when paused. Click for uptime, power source, interval, and quick toggle.
+- Real-time power source detection via IOKit callbacks — interval adjusts instantly when you plug in or unplug, even while the menu is open.
+- Auto-detects MDM screensaver profiles at `/Library/Managed Preferences` and parses `pmset` power timers.
+- Calculates 80% of the shortest detected timer as the keep-alive interval, clamped between 10s and 300s.
+- Sends `fn` key (key code 63) via System Events on each tick — no visible effect, no modifier conflict.
+- Holds an IOKit display sleep assertion on battery to prevent display sleep independently.
 
-- Auto-detects MDM screensaver and power management policies
-- Calculates optimal keep-alive interval (80% of shortest detected timer)
-- Adapts between AC power and battery with different intervals
-- Native macOS Settings window with General, Timing, and About tabs
-- Outline sun/moon SF Symbol menu bar icon
-- Launch at Login support
-- Update checker (checks GitHub releases)
-- Works with all apps (System Events posts at the OS level)
+## Settings
 
-## How it works
+The native Settings window has three tabs:
 
-1. Reads `/Library/Managed Preferences/com.apple.screensaver` for the MDM idle timeout
-2. Reads `pmset -g custom` for battery/AC sleep timers
-3. Calculates the shortest timer and fires at 80% of that interval
-4. Sends `fn` key (key code 63) via System Events on each tick
-5. Holds an IOKit display sleep assertion when on battery
+- **General** — Start active on launch, Launch at Login, power change notifications, quit.
+- **Timing** — Switch between Automatic and Manual interval modes. Manual lets you set a custom interval (10–300s). Changes take effect immediately on the running timer. Detected MDM policies and pmset timers are displayed.
+- **About** — Version, update checker (checks GitHub releases), project link.
+
+## How It Works
+
+Each tick follows four steps:
+
+1. **Detect** — Read MDM screensaver profile and pmset sleep timers.
+2. **Calculate** — Pick the shortest timer, fire at 80% of that value.
+3. **Simulate** — Send `fn` keypress via System Events to reset HIDIdleTime.
+4. **Adapt** — IOKit callback detects power source change, adjust interval instantly.
+
+## Privacy
+
+Zero analytics. Zero telemetry. No network calls except optional GitHub update checks. Reads only managed preferences and power state. Requires Accessibility access for System Events key simulation. No Full Disk Access. No admin rights needed.
 
 ## Development
 
+KeepAwake is a SwiftPM-based macOS menu bar app.
+
+Requirements:
+
+- macOS 14+
+- Swift 5.9+
+- Apple Silicon
+
 ```bash
-make build      # compile
-make test       # run unit tests
-make bundle     # create .app bundle
-make dmg        # create DMG
+make build      # compile release binary
+make test       # run unit tests (parallel)
+make bundle     # create signed .app bundle
+make dmg        # create DMG installer
 make release    # create release DMG with SHA256
+make clean      # remove build artifacts
 ```
+
+Releases are automated via GitHub Actions. Go to **Actions > Ship**, pick `patch`, `minor`, or `major` — it bumps the version, builds, tests, creates a DMG, publishes a GitHub release, and updates the [Homebrew tap](https://github.com/yashiels/homebrew-tap).
+
+## Project Layout
+
+- `Sources/KeepAwake/` — App entry point, menu bar controller, settings window, preferences panes.
+- `Sources/KeepAwake/KeepAwakeManager.swift` — Core timer, power source monitoring, activity simulation.
+- `Sources/KeepAwake/PolicyDetector.swift` — MDM profile and pmset parser.
+- `Sources/KeepAwake/SettingsStore.swift` — Observable settings with UserDefaults persistence.
+- `Tests/KeepAwakeTests/` — Unit tests for manager, policy detector, and settings.
+- `docs/` — Marketing website (GitHub Pages).
+- `scripts/` — Shell script alternative and icon generator.
 
 ## Shell Script
 
-A lightweight shell script alternative is available in `scripts/keep-awake.sh`.
+A lightweight shell script alternative is available in `scripts/keep-awake.sh` for environments where installing an app isn't practical.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
