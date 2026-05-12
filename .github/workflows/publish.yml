@@ -1,0 +1,162 @@
+name: Release
+
+# Trigger manually from Actions tab — pick patch/minor/major
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+      - name: Select Xcode
+        run: |
+          XCODE_PATH=$(find /Applications -maxdepth 1 -name "Xcode*.app" -type d | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE_PATH"
+          swift --version
+
+      - name: Bump version
+        id: version
+        run: |
+          source version.env
+          IFS='.' read -r major minor patch <<< "$MARKETING_VERSION"
+
+          case "${{ inputs.bump }}" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+
+          NEW_VERSION="${major}.${minor}.${patch}"
+          NEW_BUILD=$((BUILD_NUMBER + 1))
+
+          echo "MARKETING_VERSION=${NEW_VERSION}" > version.env
+          echo "BUILD_NUMBER=${NEW_BUILD}" >> version.env
+
+          python3 -c "
+          import plistlib, pathlib
+          p = pathlib.Path('Sources/KeepAwake/Resources/Info.plist')
+          plist = plistlib.loads(p.read_bytes())
+          plist['CFBundleShortVersionString'] = '${NEW_VERSION}'
+          plist['CFBundleVersion'] = '${NEW_BUILD}'
+          p.write_bytes(plistlib.dumps(plist))
+          "
+
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "build=${NEW_BUILD}" >> "$GITHUB_OUTPUT"
+          echo "Bumped to v${NEW_VERSION} (build ${NEW_BUILD})"
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Test
+        run: swift test --parallel
+
+      - name: Bundle app
+        run: |
+          mkdir -p KeepAwake.app/Contents/MacOS KeepAwake.app/Contents/Resources
+          cp .build/release/KeepAwake KeepAwake.app/Contents/MacOS/
+          cp Sources/KeepAwake/Resources/Info.plist KeepAwake.app/Contents/
+          cp Icon.icns KeepAwake.app/Contents/Resources/AppIcon.icns 2>/dev/null || true
+
+      - name: Create DMG
+        id: dmg
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DMG_NAME="KeepAwake-v${VERSION}.dmg"
+          DMG_DIR=$(mktemp -d)
+          cp -r KeepAwake.app "$DMG_DIR/"
+          ln -s /Applications "$DMG_DIR/Applications"
+          hdiutil create -volname "KeepAwake" -srcfolder "$DMG_DIR" -ov -format UDZO "$DMG_NAME"
+          rm -rf "$DMG_DIR"
+
+          SHA=$(shasum -a 256 "$DMG_NAME" | awk '{print $1}')
+          echo "dmg_name=${DMG_NAME}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA}" >> "$GITHUB_OUTPUT"
+          echo "SHA-256: ${SHA}"
+
+      - name: Commit version bump
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version.env Sources/KeepAwake/Resources/Info.plist
+          git commit -m "chore(release): bump version to ${VERSION}"
+          git tag "v${VERSION}"
+          git push origin main --tags
+
+      - name: Create GitHub Release
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA="${{ steps.dmg.outputs.sha256 }}"
+          gh release create "v${VERSION}" \
+            "${{ steps.dmg.outputs.dmg_name }}" \
+            --title "KeepAwake v${VERSION}" \
+            --generate-notes \
+            --notes "### Install
+          \`\`\`bash
+          brew install --cask yashiels/tap/keepawake
+          \`\`\`
+          Or download the DMG below.
+
+          **SHA-256:** \`${SHA}\`"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA="${{ steps.dmg.outputs.sha256 }}"
+
+          WORK=$(mktemp -d)
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/yashiels/homebrew-tap.git" "$WORK"
+          cd "$WORK"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          cat > Casks/keepawake.rb <<CASK
+cask "keepawake" do
+  version "${VERSION}"
+  sha256 "${SHA}"
+
+  url "https://github.com/yashiels/keep-awake/releases/download/v#{version}/KeepAwake-v#{version}.dmg"
+  name "KeepAwake"
+  desc "Menu bar app to prevent Jamf-managed macOS screen lock"
+  homepage "https://github.com/yashiels/keep-awake"
+
+  app "KeepAwake.app"
+
+  zap trash: [
+    "~/Library/Preferences/com.yashiels.KeepAwake.plist",
+  ]
+end
+CASK
+
+          git add Casks/keepawake.rb
+          git commit -m "chore: bump keepawake to v${VERSION}"
+          git push origin main
+          echo "Homebrew tap updated to v${VERSION}"
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.dmg.outputs.dmg_name }}
+          path: ${{ steps.dmg.outputs.dmg_name }}
