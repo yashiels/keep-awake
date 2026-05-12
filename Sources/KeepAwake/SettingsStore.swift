@@ -19,7 +19,11 @@ final class SettingsStore {
     }
 
     var manualInterval: Int {
-        didSet { defaults.set(manualInterval, forKey: key("manualInterval")) }
+        didSet {
+            let clamped = max(10, min(300, manualInterval))
+            if clamped != manualInterval { manualInterval = clamped }
+            defaults.set(manualInterval, forKey: key("manualInterval"))
+        }
     }
 
     var launchAtLogin: Bool {
@@ -43,7 +47,8 @@ final class SettingsStore {
         self.notifyOnPowerChange = defaults.object(forKey: prefix + "notifyOnPowerChange") as? Bool ?? true
         self.useAutoInterval = defaults.object(forKey: prefix + "useAutoInterval") as? Bool ?? true
         let manual = defaults.integer(forKey: prefix + "manualInterval")
-        self.manualInterval = manual > 0 ? manual : 120
+        let rawManual = manual > 0 ? manual : 120
+        self.manualInterval = max(10, min(300, rawManual))
     }
 
     private func key(_ name: String) -> String {
