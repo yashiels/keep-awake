@@ -5,8 +5,8 @@ enum PreferencesTab: String, CaseIterable, Hashable {
     case timing
     case about
 
-    static let defaultWidth: CGFloat = 450
-    static let windowHeight: CGFloat = 380
+    static let defaultWidth: CGFloat = 500
+    static let windowHeight: CGFloat = 460
 
     var title: String {
         switch self {

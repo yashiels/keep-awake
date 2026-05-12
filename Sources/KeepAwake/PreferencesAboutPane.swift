@@ -9,8 +9,12 @@ struct PreferencesAboutPane: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
     }
 
+    private var buildString: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
+    }
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 14) {
             if let image = NSApplication.shared.applicationIconImage {
                 Button {
                     if let url = URL(string: "https://github.com/yashiels/keep-awake") {
@@ -19,7 +23,7 @@ struct PreferencesAboutPane: View {
                 } label: {
                     Image(nsImage: image)
                         .resizable()
-                        .frame(width: 92, height: 92)
+                        .frame(width: 88, height: 88)
                         .cornerRadius(16)
                         .scaleEffect(iconHover ? 1.05 : 1.0)
                         .shadow(color: iconHover ? .accentColor.opacity(0.25) : .clear, radius: 6)
@@ -32,25 +36,33 @@ struct PreferencesAboutPane: View {
                 }
             }
 
-            VStack(spacing: 2) {
+            VStack(spacing: 3) {
                 Text("KeepAwake")
                     .font(.title3).bold()
-                Text("Version \(versionString)")
+                Text("Version \(versionString) (\(buildString))")
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                 Text("Keeps your Mac awake when MDM wants it asleep.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
             }
 
-            VStack(alignment: .center, spacing: 10) {
+            VStack(alignment: .center, spacing: 6) {
                 AboutLinkRow(
                     icon: "chevron.left.slash.chevron.right",
                     title: "GitHub",
                     url: "https://github.com/yashiels/keep-awake")
+                AboutLinkRow(
+                    icon: "globe",
+                    title: "Website",
+                    url: "https://yashiels.github.io/keep-awake")
+                AboutLinkRow(
+                    icon: "ant",
+                    title: "Report an Issue",
+                    url: "https://github.com/yashiels/keep-awake/issues")
             }
-            .padding(.top, 8)
+            .padding(.top, 4)
             .frame(maxWidth: .infinity)
-            .multilineTextAlignment(.center)
 
             Divider()
 
@@ -83,17 +95,16 @@ struct PreferencesAboutPane: View {
                 }
             }
 
-            Text("\u{00A9} 2026 Yashiel Sookdeo")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .padding(.top, 4)
-
             Spacer(minLength: 0)
+
+            Text("\u{00A9} 2026 Yashiel Sookdeo. MIT License.")
+                .font(.footnote)
+                .foregroundStyle(.quaternary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.top, 4)
         .padding(.horizontal, 24)
-        .padding(.bottom, 24)
+        .padding(.bottom, 16)
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
                 updateChecker.checkForUpdates()

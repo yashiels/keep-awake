@@ -5,8 +5,7 @@ struct PreferencesTimingPane: View {
     let manager: KeepAwakeManager
 
     var body: some View {
-        ScrollView(.vertical, showsIndicators: true) {
-            VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 16) {
                 SettingsSection(contentSpacing: 12) {
                     Text("INTERVAL")
                         .font(.caption)
@@ -113,11 +112,11 @@ struct PreferencesTimingPane: View {
                         }
                     }
                 }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
     }
 
     private func policyRow(_ label: String, value: String) -> some View {
