@@ -9,10 +9,6 @@ struct PreferencesAboutPane: View {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
     }
 
-    private var buildString: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1"
-    }
-
     var body: some View {
         VStack(spacing: 14) {
             if let image = NSApplication.shared.applicationIconImage {
@@ -39,7 +35,7 @@ struct PreferencesAboutPane: View {
             VStack(spacing: 3) {
                 Text("KeepAwake")
                     .font(.title3).bold()
-                Text("Version \(versionString) (\(buildString))")
+                Text("Version \(versionString)")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Text("Keeps your Mac awake when MDM wants it asleep.")
