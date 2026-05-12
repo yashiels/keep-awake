@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 @main
 struct KeepAwakeApp: App {
@@ -27,6 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var settingsWindowController: SettingsWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+
         let settings = SettingsStore()
         let detector = PolicyDetector()
         detector.refresh()
