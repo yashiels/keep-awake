@@ -1,5 +1,6 @@
 name: Release
 
+# Trigger manually from Actions tab — pick patch/minor/major
 on:
   workflow_dispatch:
     inputs:
