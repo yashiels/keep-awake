@@ -18,6 +18,7 @@ final class KeepAwakeManager {
     private var policyRefreshTimer: Timer?
     private var displayAssertionID: IOPMAssertionID = IOPMAssertionID(kIOPMNullAssertionID)
     private var powerSourceLoop: CFRunLoopSource?
+    private var powerSourceContext: UnsafeMutableRawPointer?
 
     var interval: TimeInterval {
         if settings.useAutoInterval {
@@ -84,13 +85,18 @@ final class KeepAwakeManager {
     // MARK: - Power Source Monitoring
 
     private func startPowerSourceMonitoring() {
-        let context = Unmanaged.passUnretained(self).toOpaque()
+        let context = Unmanaged.passRetained(self).toOpaque()
         guard let source = IOPSNotificationCreateRunLoopSource({ context in
             guard let context else { return }
             let manager = Unmanaged<KeepAwakeManager>.fromOpaque(context).takeUnretainedValue()
             manager.handlePowerSourceChange()
-        }, context)?.takeRetainedValue() else { return }
+        }, context)?.takeRetainedValue() else {
+            // Balance the retain if source creation failed
+            Unmanaged<KeepAwakeManager>.fromOpaque(context).release()
+            return
+        }
 
+        powerSourceContext = context
         powerSourceLoop = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
     }
@@ -197,6 +203,10 @@ final class KeepAwakeManager {
     deinit {
         if let source = powerSourceLoop {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
+        }
+        // Balance the passRetained from startPowerSourceMonitoring
+        if let ctx = powerSourceContext {
+            Unmanaged<KeepAwakeManager>.fromOpaque(ctx).release()
         }
     }
 }
