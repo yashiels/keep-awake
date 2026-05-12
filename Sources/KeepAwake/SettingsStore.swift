@@ -26,17 +26,21 @@ final class SettingsStore {
         }
     }
 
+    private var isUpdatingLaunchAtLogin = false
+
     var launchAtLogin: Bool {
-        get { SMAppService.mainApp.status == .enabled }
-        set {
+        didSet {
+            guard !isUpdatingLaunchAtLogin else { return }
             do {
-                if newValue {
+                if launchAtLogin {
                     try SMAppService.mainApp.register()
                 } else {
                     try SMAppService.mainApp.unregister()
                 }
             } catch {
-                // SMAppService threw — SMAppService.mainApp.status is the source of truth
+                isUpdatingLaunchAtLogin = true
+                launchAtLogin = SMAppService.mainApp.status == .enabled
+                isUpdatingLaunchAtLogin = false
             }
         }
     }
@@ -49,6 +53,7 @@ final class SettingsStore {
         let manual = defaults.integer(forKey: prefix + "manualInterval")
         let rawManual = manual > 0 ? manual : 120
         self.manualInterval = max(10, min(300, rawManual))
+        self.launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
     private func key(_ name: String) -> String {
