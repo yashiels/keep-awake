@@ -112,11 +112,6 @@ final class KeepAwakeManager {
 
         if isActive {
             scheduleTimer()
-            if isOnAC {
-                releaseDisplayAssertion()
-            } else {
-                createDisplayAssertion()
-            }
         }
 
         onPowerSourceChanged?()
