@@ -23,6 +23,7 @@ bundle: build
 	cp $(BUILD_DIR)/$(APP_NAME) $(APP_BUNDLE)/Contents/MacOS/
 	cp Sources/KeepAwake/Resources/Info.plist $(APP_BUNDLE)/Contents/
 	cp Icon.icns $(APP_BUNDLE)/Contents/Resources/AppIcon.icns 2>/dev/null || true
+	codesign --force --deep --sign - $(APP_BUNDLE)
 
 dmg: bundle
 	$(eval DMG_DIR := $(shell mktemp -d))

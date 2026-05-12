@@ -37,6 +37,7 @@ jobs:
           cp .build/release/KeepAwake KeepAwake.app/Contents/MacOS/
           cp Sources/KeepAwake/Resources/Info.plist KeepAwake.app/Contents/
           cp Icon.icns KeepAwake.app/Contents/Resources/AppIcon.icns 2>/dev/null || true
+          codesign --force --deep --sign - KeepAwake.app
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
