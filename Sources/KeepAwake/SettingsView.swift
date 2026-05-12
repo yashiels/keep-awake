@@ -82,7 +82,7 @@ private struct AboutTab: View {
     var body: some View {
         Form {
             Section {
-                LabeledContent("Version") { Text("1.0.0") }
+                LabeledContent("Version") { Text("0.1.0") }
             }
 
             Section("Detected MDM Policies") {

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          XCODE_PATH=$(find /Applications -maxdepth 1 -name "Xcode*.app" -type d | sort -V | tail -1)
+          echo "Using $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          swift --version
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Test
+        run: swift test --parallel
+
+      - name: Bundle app
+        run: |
+          mkdir -p KeepAwake.app/Contents/MacOS KeepAwake.app/Contents/Resources
+          cp .build/release/KeepAwake KeepAwake.app/Contents/MacOS/
+          cp Sources/KeepAwake/Resources/Info.plist KeepAwake.app/Contents/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeepAwake.app
+          path: KeepAwake.app

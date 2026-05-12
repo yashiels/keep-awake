@@ -8,7 +8,7 @@ let package = Package(
         .executableTarget(
             name: "KeepAwake",
             path: "Sources/KeepAwake",
-            exclude: ["Resources/Info.plist"],
+            exclude: ["Resources/Info.plist", "Resources/AppIcon.icns"],
             linkerSettings: [
                 .unsafeFlags([
                     "-Xlinker", "-sectcreate",
@@ -17,6 +17,11 @@ let package = Package(
                     "-Xlinker", "Sources/KeepAwake/Resources/Info.plist",
                 ])
             ]
-        )
+        ),
+        .testTarget(
+            name: "KeepAwakeTests",
+            dependencies: ["KeepAwake"],
+            path: "Tests/KeepAwakeTests"
+        ),
     ]
 )

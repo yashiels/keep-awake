@@ -100,7 +100,13 @@ final class StatusBarController: NSObject, NSMenuDelegate {
 
     @objc private func openSettings() {
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        // Find and show the settings window, or create it if needed
+        if let existing = NSApp.windows.first(where: { $0.title == "KeepAwake Settings" }) {
+            existing.makeKeyAndOrderFront(nil)
+        } else {
+            // Trigger SwiftUI Window scene via openWindow environment action
+            NSApp.sendAction(#selector(AppDelegate.openSettingsWindow), to: NSApp.delegate, from: nil)
+        }
     }
 
     @objc private func quitApp() {

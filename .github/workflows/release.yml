@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          XCODE_PATH=$(find /Applications -maxdepth 1 -name "Xcode*.app" -type d | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE_PATH"
+          swift --version
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Test
+        run: swift test --parallel
+
+      - name: Generate icon
+        run: swift scripts/generate-icon.swift Sources/KeepAwake/Resources
+
+      - name: Bundle app
+        run: |
+          mkdir -p KeepAwake.app/Contents/MacOS KeepAwake.app/Contents/Resources
+          cp .build/release/KeepAwake KeepAwake.app/Contents/MacOS/
+          cp Sources/KeepAwake/Resources/Info.plist KeepAwake.app/Contents/
+          cp Sources/KeepAwake/Resources/AppIcon.icns KeepAwake.app/Contents/Resources/
+
+      - name: Create DMG
+        run: |
+          # Create a temporary DMG directory
+          DMG_DIR=$(mktemp -d)
+          cp -r KeepAwake.app "$DMG_DIR/"
+          ln -s /Applications "$DMG_DIR/Applications"
+
+          # Create DMG
+          hdiutil create -volname "KeepAwake" \
+            -srcfolder "$DMG_DIR" \
+            -ov -format UDZO \
+            "KeepAwake-v${{ steps.version.outputs.version }}.dmg"
+
+          shasum -a 256 "KeepAwake-v${{ steps.version.outputs.version }}.dmg" | tee sha256.txt
+
+      - name: Create GitHub Release
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "KeepAwake-v${{ steps.version.outputs.version }}.dmg" \
+            --title "KeepAwake v${{ steps.version.outputs.version }}" \
+            --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KeepAwake-v${{ steps.version.outputs.version }}.dmg
+          path: "KeepAwake-v${{ steps.version.outputs.version }}.dmg"

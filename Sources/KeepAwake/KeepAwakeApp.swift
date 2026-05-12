@@ -5,23 +5,13 @@ struct KeepAwakeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
-        WindowGroup("KeepAwakeKeepalive") {
-            Color.clear
-                .frame(width: 0, height: 0)
-                .onAppear {
-                    for window in NSApplication.shared.windows where window.title == "KeepAwakeKeepalive" {
-                        window.setFrame(.zero, display: false)
-                        window.orderOut(nil)
-                    }
-                }
-        }
-        .defaultSize(width: 0, height: 0)
-
-        Settings {
+        Window("KeepAwake Settings", id: "settings") {
             if let manager = appDelegate.manager {
                 SettingsView(settings: manager.settings, manager: manager)
             }
         }
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
     }
 }
 
@@ -43,9 +33,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             statusBarController?.updateIcon()
         }
 
-        for window in NSApplication.shared.windows where window.title == "KeepAwakeKeepalive" {
-            window.setFrame(.zero, display: false)
-            window.orderOut(nil)
+        // Hide settings window on launch — only show via menu
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            for window in NSApplication.shared.windows {
+                if window.title == "KeepAwake Settings" {
+                    window.orderOut(nil)
+                }
+            }
+        }
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false
+    }
+
+    @objc func openSettingsWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        if let existing = NSApp.windows.first(where: { $0.title == "KeepAwake Settings" }) {
+            existing.makeKeyAndOrderFront(nil)
         }
     }
 }
