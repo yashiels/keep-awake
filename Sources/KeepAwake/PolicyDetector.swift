@@ -8,6 +8,7 @@ struct DetectedPolicy: Identifiable {
     let seconds: Int?
 }
 
+@Observable
 final class PolicyDetector {
     private(set) var policies: [DetectedPolicy] = []
     private(set) var screensaverIdleTime: Int?
@@ -17,9 +18,34 @@ final class PolicyDetector {
     private(set) var acSleep: Int?
 
     func refresh() {
-        policies = []
-        readManagedScreensaver()
-        readPmset()
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self else { return }
+            var newPolicies: [DetectedPolicy] = []
+            var newScreensaverIdleTime: Int?
+            var newBatteryDisplaySleep: Int?
+            var newBatterySleep: Int?
+            var newAcDisplaySleep: Int?
+            var newAcSleep: Int?
+
+            Self.readManagedScreensaver(
+                into: &newPolicies,
+                screensaverIdleTime: &newScreensaverIdleTime)
+            Self.readPmset(
+                into: &newPolicies,
+                batteryDisplaySleep: &newBatteryDisplaySleep,
+                batterySleep: &newBatterySleep,
+                acDisplaySleep: &newAcDisplaySleep,
+                acSleep: &newAcSleep)
+
+            DispatchQueue.main.async {
+                self.policies = newPolicies
+                self.screensaverIdleTime = newScreensaverIdleTime
+                self.batteryDisplaySleep = newBatteryDisplaySleep
+                self.batterySleep = newBatterySleep
+                self.acDisplaySleep = newAcDisplaySleep
+                self.acSleep = newAcSleep
+            }
+        }
     }
 
     func recommendedInterval(isOnAC: Bool) -> TimeInterval {
@@ -40,11 +66,14 @@ final class PolicyDetector {
         return max(10, min(300, interval))
     }
 
-    private func readManagedScreensaver() {
+    private static func readManagedScreensaver(
+        into policies: inout [DetectedPolicy],
+        screensaverIdleTime: inout Int?)
+    {
         let path = "/Library/Managed Preferences/com.apple.screensaver"
         guard let prefs = UserDefaults(suiteName: path),
               let idleTime = prefs.object(forKey: "idleTime") as? Int else {
-            readManagedScreensaverViaDefaults()
+            readManagedScreensaverViaDefaults(into: &policies, screensaverIdleTime: &screensaverIdleTime)
             return
         }
 
@@ -75,7 +104,10 @@ final class PolicyDetector {
         }
     }
 
-    private func readManagedScreensaverViaDefaults() {
+    private static func readManagedScreensaverViaDefaults(
+        into policies: inout [DetectedPolicy],
+        screensaverIdleTime: inout Int?)
+    {
         let output = shell("/usr/bin/defaults", args: ["read", "/Library/Managed Preferences/com.apple.screensaver", "idleTime"])
         if let val = Int(output.trimmingCharacters(in: .whitespacesAndNewlines)) {
             screensaverIdleTime = val
@@ -88,7 +120,13 @@ final class PolicyDetector {
         }
     }
 
-    private func readPmset() {
+    private static func readPmset(
+        into policies: inout [DetectedPolicy],
+        batteryDisplaySleep: inout Int?,
+        batterySleep: inout Int?,
+        acDisplaySleep: inout Int?,
+        acSleep: inout Int?)
+    {
         let output = shell("/usr/bin/pmset", args: ["-g", "custom"])
         var inBattery = false
         var inAC = false
@@ -130,7 +168,7 @@ final class PolicyDetector {
         }
     }
 
-    private func shell(_ path: String, args: [String]) -> String {
+    private static func shell(_ path: String, args: [String]) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = args
