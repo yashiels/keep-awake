@@ -2,6 +2,7 @@ import Foundation
 import IOKit.ps
 import IOKit.pwr_mgt
 import UserNotifications
+import CoreGraphics
 
 @Observable
 final class KeepAwakeManager {
@@ -141,6 +142,14 @@ final class KeepAwakeManager {
     // MARK: - Activity Simulation
 
     private func simulateActivity() {
+        // Prefer CGEvent (no subprocess, no System Events dependency)
+        if let keyDown = CGEvent(keyboardEventSource: nil, virtualKey: 0x3F, keyDown: true),
+           let keyUp = CGEvent(keyboardEventSource: nil, virtualKey: 0x3F, keyDown: false) {
+            keyDown.post(tap: .cghidEventTap)
+            keyUp.post(tap: .cghidEventTap)
+            return
+        }
+        // Fallback: osascript
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
         process.arguments = ["-e", "tell application \"System Events\" to key code 63"]
