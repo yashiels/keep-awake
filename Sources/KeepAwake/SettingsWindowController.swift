@@ -12,9 +12,9 @@ final class SettingsWindowController {
     }
 
     func show() {
-        if let existing = window, existing.isVisible {
-            existing.makeKeyAndOrderFront(nil)
+        if let existing = window {
             NSApp.activate(ignoringOtherApps: true)
+            existing.makeKeyAndOrderFront(nil)
             return
         }
 
