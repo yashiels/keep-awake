@@ -25,10 +25,18 @@ jobs:
           sudo xcode-select -s "$XCODE_PATH"
           swift --version
 
+      - name: Validate bump input
+        run: |
+          case "${{ inputs.bump }}" in
+            patch|minor|major) ;;
+            *) echo "Invalid bump value: '${{ inputs.bump }}'. Must be patch, minor, or major." >&2; exit 1 ;;
+          esac
+
       - name: Bump version
         id: version
         run: |
-          source version.env
+          MARKETING_VERSION=$(grep '^MARKETING_VERSION=' version.env | cut -d= -f2)
+          BUILD_NUMBER=$(grep '^BUILD_NUMBER=' version.env | cut -d= -f2)
           IFS='.' read -r major minor patch <<< "$MARKETING_VERSION"
 
           case "${{ inputs.bump }}" in
@@ -117,7 +125,7 @@ jobs:
           SHA="${{ steps.dmg.outputs.sha256 }}"
 
           WORK=$(mktemp -d)
-          git clone "https://x-access-token:${TAP_TOKEN}@github.com/yashiels/homebrew-tap.git" "$WORK"
+          git clone "https://github.com/yashiels/homebrew-tap.git" "$WORK"
           cd "$WORK"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -150,6 +158,7 @@ jobs:
 
           git add Casks/keepawake.rb
           git commit -m "chore: bump keepawake to v${VERSION}"
+          git remote set-url origin "https://x-access-token:${TAP_TOKEN}@github.com/yashiels/homebrew-tap.git"
           git push origin main
           echo "Homebrew tap updated to v${VERSION}"
 
