@@ -108,6 +108,9 @@ struct PreferencesTimingPane: View {
                         if let t = manager.policyDetector.acDisplaySleep {
                             policyRow("AC display sleep", value: t == 0 ? "Never" : "\(t) min")
                         }
+                        if let t = manager.policyDetector.acSleep {
+                            policyRow("AC system sleep", value: t == 0 ? "Never" : "\(t) min")
+                        }
                     }
                 }
             }
