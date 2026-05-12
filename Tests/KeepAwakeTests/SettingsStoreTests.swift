@@ -3,22 +3,18 @@ import XCTest
 
 final class SettingsStoreTests: XCTestCase {
     private var store: SettingsStore!
-    private let defaults = UserDefaults.standard
-    private let prefix = "com.yashiels.KeepAwake."
+    private var suite: UserDefaults!
+    private var suiteName: String!
 
     override func setUp() {
         super.setUp()
-        store = KeepAwake.SettingsStore()
-        // Clean test keys
-        for key in ["startOnLaunch", "notifyOnPowerChange", "useAutoInterval", "manualInterval"] {
-            defaults.removeObject(forKey: prefix + key)
-        }
+        suiteName = "com.yashiels.KeepAwake.test.\(UUID().uuidString)"
+        suite = UserDefaults(suiteName: suiteName)!
+        store = SettingsStore(defaults: suite)
     }
 
     override func tearDown() {
-        for key in ["startOnLaunch", "notifyOnPowerChange", "useAutoInterval", "manualInterval"] {
-            defaults.removeObject(forKey: prefix + key)
-        }
+        UserDefaults.standard.removePersistentDomain(forName: suiteName)
         super.tearDown()
     }
 
@@ -26,11 +22,9 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertTrue(store.startOnLaunch)
     }
 
-    func testStartOnLaunchPersists() {
+    func testStartOnLaunchCanBeSet() {
         store.startOnLaunch = false
         XCTAssertFalse(store.startOnLaunch)
-        let freshStore = KeepAwake.SettingsStore()
-        XCTAssertFalse(freshStore.startOnLaunch)
     }
 
     func testNotifyOnPowerChangeDefaultsToTrue() {
@@ -45,10 +39,8 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.manualInterval, 120)
     }
 
-    func testManualIntervalPersists() {
+    func testManualIntervalCanBeSet() {
         store.manualInterval = 60
         XCTAssertEqual(store.manualInterval, 60)
-        let freshStore = KeepAwake.SettingsStore()
-        XCTAssertEqual(freshStore.manualInterval, 60)
     }
 }

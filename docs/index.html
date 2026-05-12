@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>KeepAwake — defeat MDM screen lock from your menu bar</title>
+    <meta name="description" content="A native macOS menu bar app that prevents Jamf-managed screen lock by simulating user activity. Auto-detects MDM policies and adapts to your power source." />
+    <meta name="theme-color" content="#0b0908" />
+    <meta property="og:title" content="KeepAwake" />
+    <meta property="og:description" content="Defeat MDM screen lock from your macOS menu bar. Auto-detects policies, adapts to power source, simulates invisible user activity." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="./icon.png" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" href="./icon.png" type="image/png" />
+    <link rel="apple-touch-icon" href="./icon.png" />
+    <link rel="stylesheet" href="./site.css?v=2" />
+  </head>
+  <body>
+
+    <div class="atmosphere" aria-hidden="true">
+      <div class="orb o1"></div>
+      <div class="orb o2"></div>
+      <div class="orb o3"></div>
+    </div>
+
+    <header class="masthead wrap">
+      <a class="brand" href="./" aria-label="KeepAwake">
+        <img class="mark" src="./icon.png" alt="" width="30" height="30" />
+        <span>KeepAwake</span>
+      </a>
+      <nav class="nav" aria-label="Primary">
+        <a href="https://github.com/yashiels/keep-awake">Source</a>
+        <a class="btn primary" href="https://github.com/yashiels/keep-awake/releases/latest">Download</a>
+      </nav>
+    </header>
+
+    <main>
+
+      <!-- HERO -->
+      <section class="hero wrap">
+        <div class="hero-inner">
+          <h1>Your Mac stays awake.<br><span class="glow">MDM can't touch this.</span></h1>
+          <p class="subtitle">
+            KeepAwake reads Jamf screensaver policies and power management timers,
+            then simulates invisible user activity at the optimal interval &mdash;
+            so your screen never locks while you're in the zone.
+          </p>
+          <div class="actions">
+            <a class="btn primary lg" href="https://github.com/yashiels/keep-awake/releases/latest">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v8m0 0l-3-3m3 3l3-3M3 13h10"/></svg>
+              Download for macOS
+            </a>
+            <div class="brew" role="group" aria-label="Homebrew install command">
+              <code id="brew-cmd">brew install --cask yashiels/tap/keepawake</code>
+              <button class="brew-copy" type="button" aria-label="Copy to clipboard" title="Copy">
+                <svg class="ic" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M5 11H3.5A1.5 1.5 0 0 1 2 9.5v-7A1.5 1.5 0 0 1 3.5 1h7A1.5 1.5 0 0 1 12 2.5V5"/></svg>
+                <svg class="ok" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 8 6 11 13 4"/></svg>
+              </button>
+            </div>
+          </div>
+          <p class="meta-line"><span>&#9679;</span> Free &amp; open source &nbsp;&middot;&nbsp; macOS 14+ &nbsp;&middot;&nbsp; Apple Silicon &nbsp;&middot;&nbsp; Menu bar native</p>
+        </div>
+      </section>
+
+      <hr class="divider wrap" />
+
+      <!-- COMPARISON -->
+      <section class="comparison wrap">
+        <span class="tag">// the problem</span>
+        <h2>caffeinate doesn't cut it.</h2>
+        <p class="lead">
+          Tools like caffeinate, Amphetamine, and KeepingYouAwake only prevent <em>system sleep</em>
+          via IOKit assertions. They do <strong>not</strong> stop the screensaver lock enforced by Jamf MDM profiles.
+        </p>
+        <div class="versus">
+          <div class="vs-card them">
+            <span class="label">Others</span>
+            <h3>Prevent sleep only</h3>
+            <p>IOKit power assertions keep the system running &mdash; but the screensaver daemon has its own idle counter. <span class="strike">Screen still locks.</span></p>
+          </div>
+          <div class="vs-card us">
+            <span class="label">KeepAwake</span>
+            <h3>Resets HIDIdleTime</h3>
+            <p>Simulates a real <code>fn</code> keypress via System Events, which resets the OS idle counter that the screensaver daemon actually monitors.</p>
+          </div>
+        </div>
+      </section>
+
+      <hr class="divider wrap" />
+
+      <!-- FEATURES -->
+      <section class="features-section wrap">
+        <span class="tag">// capabilities</span>
+        <h2>What's under the hood</h2>
+        <div class="feature-grid">
+          <div class="f-cell">
+            <span class="pip"></span>
+            <span class="icon">&#9741;</span>
+            <h3>MDM Policy Detection</h3>
+            <p>Reads Jamf screensaver profiles at <code>/Library/Managed Preferences</code> and parses pmset power timers automatically.</p>
+          </div>
+          <div class="f-cell">
+            <span class="pip"></span>
+            <span class="icon">&#9201;</span>
+            <h3>Smart Intervals</h3>
+            <p>Calculates 80% of the shortest detected timer. Never too early, never too late. Clamped between 10s and 300s.</p>
+          </div>
+          <div class="f-cell">
+            <span class="pip"></span>
+            <span class="icon">&#9889;</span>
+            <h3>Instant Power Switching</h3>
+            <p>IOKit power source callbacks detect AC/battery changes in real time. Interval adjusts instantly &mdash; no polling delay.</p>
+          </div>
+          <div class="f-cell">
+            <span class="pip"></span>
+            <span class="icon">&#9788;</span>
+            <h3>Invisible Activity</h3>
+            <p>Sends <code>fn</code> key (code 63) via System Events. No visible effect, no modifier conflict. Just a silent idle reset.</p>
+          </div>
+          <div class="f-cell">
+            <span class="pip"></span>
+            <span class="icon">&#9881;</span>
+            <h3>Native Settings</h3>
+            <p>General, Timing, and About tabs. Toggle start-on-launch, launch-at-login, manual intervals, and update checking.</p>
+          </div>
+          <div class="f-cell">
+            <span class="pip"></span>
+            <span class="icon">&#128274;</span>
+            <h3>Display Sleep Guard</h3>
+            <p>Holds an IOPMAssertion on battery to prevent display sleep independently of the screensaver bypass.</p>
+          </div>
+        </div>
+      </section>
+
+      <hr class="divider wrap" />
+
+      <!-- HOW IT WORKS -->
+      <section class="pipeline wrap">
+        <span class="tag">// pipeline</span>
+        <h2>Four steps, every tick</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-ring">01</div>
+            <h3>Detect</h3>
+            <p>Read MDM screensaver profile &amp; pmset sleep timers</p>
+          </div>
+          <div class="step">
+            <div class="step-ring">02</div>
+            <h3>Calculate</h3>
+            <p>Pick shortest timer, fire at 80% of that value</p>
+          </div>
+          <div class="step">
+            <div class="step-ring">03</div>
+            <h3>Simulate</h3>
+            <p>Send fn keypress via System Events to reset HIDIdleTime</p>
+          </div>
+          <div class="step">
+            <div class="step-ring">04</div>
+            <h3>Adapt</h3>
+            <p>IOKit callback detects power change, adjust interval instantly</p>
+          </div>
+        </div>
+      </section>
+
+      <hr class="divider wrap" />
+
+      <!-- DETAILS -->
+      <section class="details wrap">
+        <div class="detail-grid">
+          <div class="d-cell">
+            <h3>Install</h3>
+            <p>
+              DMG from <a href="https://github.com/yashiels/keep-awake/releases/latest">GitHub Releases</a>,
+              or <code>brew install --cask yashiels/tap/keepawake</code>.
+              Build from source: <code>make run</code>.
+            </p>
+          </div>
+          <div class="d-cell">
+            <h3>Menu bar</h3>
+            <p>
+              Sun icon when active, moon when paused. Click for uptime,
+              power source, interval, and quick toggle. Settings one click away.
+            </p>
+          </div>
+          <div class="d-cell">
+            <h3>Privacy</h3>
+            <p>
+              Zero analytics. Zero telemetry. No network calls except optional
+              GitHub update checks. Reads only managed preferences and power state.
+            </p>
+          </div>
+          <div class="d-cell">
+            <h3>Permissions</h3>
+            <p>
+              Accessibility access for System Events key simulation.
+              No Full Disk Access. No admin rights needed to read MDM policies.
+            </p>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="foot wrap">
+      <p>
+        Built by <a href="https://github.com/yashiels">Yashiel Sookdeo</a> &middot;
+        <a href="https://github.com/yashiels/keep-awake">GitHub</a> &middot;
+        MIT License
+      </p>
+    </footer>
+
+    <script>
+      (function () {
+        var btn = document.querySelector('.brew-copy');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+          var text = document.getElementById('brew-cmd').textContent;
+          if (!navigator.clipboard) return;
+          navigator.clipboard.writeText(text).then(function () {
+            btn.classList.add('copied');
+            setTimeout(function () { btn.classList.remove('copied'); }, 1500);
+          });
+        });
+      })();
+    </script>
+  </body>
+</html>

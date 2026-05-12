@@ -1,4 +1,5 @@
 import Foundation
+import IOKit.ps
 import IOKit.pwr_mgt
 import UserNotifications
 
@@ -10,9 +11,12 @@ final class KeepAwakeManager {
     let policyDetector: PolicyDetector
     let settings: SettingsStore
 
+    var onPowerSourceChanged: (() -> Void)?
+
     private var timer: Timer?
     private var policyRefreshTimer: Timer?
     private var displayAssertionID: IOPMAssertionID = IOPMAssertionID(kIOPMNullAssertionID)
+    private var powerSourceLoop: CFRunLoopSource?
 
     var interval: TimeInterval {
         if settings.useAutoInterval {
@@ -29,6 +33,8 @@ final class KeepAwakeManager {
     init(policyDetector: PolicyDetector, settings: SettingsStore) {
         self.policyDetector = policyDetector
         self.settings = settings
+        updatePowerSource()
+        startPowerSourceMonitoring()
     }
 
     func toggle() {
@@ -56,14 +62,30 @@ final class KeepAwakeManager {
         releaseDisplayAssertion()
     }
 
-    private func tick() {
-        simulateActivity()
+    // MARK: - Power Source Monitoring
+
+    private func startPowerSourceMonitoring() {
+        let context = Unmanaged.passUnretained(self).toOpaque()
+        guard let source = IOPSNotificationCreateRunLoopSource({ context in
+            guard let context else { return }
+            let manager = Unmanaged<KeepAwakeManager>.fromOpaque(context).takeUnretainedValue()
+            manager.handlePowerSourceChange()
+        }, context)?.takeRetainedValue() else { return }
+
+        powerSourceLoop = source
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
+    }
+
+    private func handlePowerSourceChange() {
         let wasOnAC = isOnAC
         updatePowerSource()
-        if wasOnAC != isOnAC {
-            if settings.notifyOnPowerChange {
-                sendPowerChangeNotification()
-            }
+        guard wasOnAC != isOnAC else { return }
+
+        if settings.notifyOnPowerChange {
+            sendPowerChangeNotification()
+        }
+
+        if isActive {
             scheduleTimer()
             if isOnAC {
                 releaseDisplayAssertion()
@@ -71,6 +93,14 @@ final class KeepAwakeManager {
                 createDisplayAssertion()
             }
         }
+
+        onPowerSourceChanged?()
+    }
+
+    // MARK: - Timer
+
+    private func tick() {
+        simulateActivity()
     }
 
     private func scheduleTimer() {
@@ -88,6 +118,8 @@ final class KeepAwakeManager {
         }
     }
 
+    // MARK: - Activity Simulation
+
     private func simulateActivity() {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
@@ -97,26 +129,24 @@ final class KeepAwakeManager {
         do {
             try process.run()
         } catch {
-            // Silently continue — don't crash the timer loop
+            // Silently continue
         }
     }
 
+    // MARK: - Power Source Detection
+
     private func updatePowerSource() {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
-        process.arguments = ["-g", "batt"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
+        guard let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let sources = IOPSCopyPowerSourcesList(snapshot)?.takeRetainedValue() as? [Any],
+              !sources.isEmpty else {
+            isOnAC = true
             return
         }
-        let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-        isOnAC = output.contains("AC Power")
+        let type = IOPSGetProvidingPowerSourceType(snapshot)?.takeRetainedValue() as String?
+        isOnAC = type == kIOPSACPowerValue
     }
+
+    // MARK: - Display Assertion
 
     private func createDisplayAssertion() {
         guard displayAssertionID == IOPMAssertionID(kIOPMNullAssertionID) else { return }
@@ -124,8 +154,7 @@ final class KeepAwakeManager {
             kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
             IOPMAssertionLevel(kIOPMAssertionLevelOn),
             "KeepAwake" as CFString,
-            &displayAssertionID
-        )
+            &displayAssertionID)
     }
 
     private func releaseDisplayAssertion() {
@@ -133,6 +162,8 @@ final class KeepAwakeManager {
         IOPMAssertionRelease(displayAssertionID)
         displayAssertionID = IOPMAssertionID(kIOPMNullAssertionID)
     }
+
+    // MARK: - Notifications
 
     private func sendPowerChangeNotification() {
         let content = UNMutableNotificationContent()
@@ -142,5 +173,11 @@ final class KeepAwakeManager {
             : "Switched to Battery — interval \(Int(interval))s"
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
+    }
+
+    deinit {
+        if let source = powerSourceLoop {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .defaultMode)
+        }
     }
 }

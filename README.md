@@ -1,12 +1,18 @@
-# KeepAwake
+<p align="center">
+  <img src="docs/icon.png" alt="KeepAwake" width="128" />
+</p>
 
-A native macOS menu bar app that prevents Jamf-managed (or any MDM) screen lock by simulating user activity.
+<h1 align="center">KeepAwake</h1>
+
+<p align="center">
+  A native macOS menu bar app that prevents Jamf-managed screen lock by simulating user activity.
+</p>
 
 ## Install
 
 **Homebrew:**
 ```bash
-brew install --cask yashiels/keepawake/keepawake
+brew install --cask yashiels/tap/keepawake
 ```
 
 **DMG:** Download from [Releases](https://github.com/yashiels/keep-awake/releases), open the DMG, drag KeepAwake to Applications.
@@ -14,7 +20,7 @@ brew install --cask yashiels/keepawake/keepawake
 **Build from source:**
 ```bash
 make run        # build and launch
-make install    # build and copy to /Applications
+make install    # copy to /Applications
 make dmg        # create DMG installer
 ```
 
@@ -27,9 +33,10 @@ make dmg        # create DMG installer
 - Auto-detects MDM screensaver and power management policies
 - Calculates optimal keep-alive interval (80% of shortest detected timer)
 - Adapts between AC power and battery with different intervals
-- Settings window with General, Timing, and About tabs
+- Native macOS Settings window with General, Timing, and About tabs
 - Outline sun/moon SF Symbol menu bar icon
 - Launch at Login support
+- Update checker (checks GitHub releases)
 - Works with all apps (System Events posts at the OS level)
 
 ## How it works
@@ -44,12 +51,12 @@ make dmg        # create DMG installer
 
 ```bash
 make build      # compile
-make test       # run 19 unit tests
+make test       # run unit tests
 make bundle     # create .app bundle
 make dmg        # create DMG
 make release    # create release DMG with SHA256
 ```
 
-## Shell Script (lightweight alternative)
+## Shell Script
 
-A standalone shell script is available in `scripts/keep-awake.sh` for systems where you can't install apps.
+A lightweight shell script alternative is available in `scripts/keep-awake.sh`.

@@ -3,8 +3,12 @@ import ServiceManagement
 
 @Observable
 final class SettingsStore {
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private let prefix = "com.yashiels.KeepAwake."
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
 
     var startOnLaunch: Bool {
         get { defaults.object(forKey: key("startOnLaunch")) as? Bool ?? true }

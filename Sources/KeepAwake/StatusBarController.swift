@@ -3,9 +3,11 @@ import AppKit
 final class StatusBarController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let manager: KeepAwakeManager
+    private let settingsWindowController: SettingsWindowController
 
-    init(manager: KeepAwakeManager) {
+    init(manager: KeepAwakeManager, settingsWindowController: SettingsWindowController) {
         self.manager = manager
+        self.settingsWindowController = settingsWindowController
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         super.init()
         setupStatusItem()
@@ -36,9 +38,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         if manager.isActive {
             let statusItem = NSMenuItem(
                 title: "Active for \(formatUptime())",
-                action: nil,
-                keyEquivalent: ""
-            )
+                action: nil, keyEquivalent: "")
             statusItem.isEnabled = false
             statusItem.image = dotImage(color: .systemGreen)
             menu.addItem(statusItem)
@@ -46,11 +46,9 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             let powerLabel = manager.isOnAC ? "AC Power" : "Battery"
             let powerItem = NSMenuItem(
                 title: "\(powerLabel)  ·  \(Int(manager.interval))s interval",
-                action: nil,
-                keyEquivalent: ""
-            )
-            let powerIcon = manager.isOnAC ? "bolt.fill" : "battery.50"
-            powerItem.image = NSImage(systemSymbolName: powerIcon, accessibilityDescription: nil)
+                action: nil, keyEquivalent: "")
+            powerItem.image = NSImage(systemSymbolName: manager.isOnAC ? "bolt.fill" : "battery.50",
+                                       accessibilityDescription: nil)
             powerItem.isEnabled = false
             menu.addItem(powerItem)
         } else {
@@ -64,29 +62,20 @@ final class StatusBarController: NSObject, NSMenuDelegate {
 
         let toggleItem = NSMenuItem(
             title: manager.isActive ? "Disable" : "Enable",
-            action: #selector(toggleKeepAwake),
-            keyEquivalent: ""
-        )
+            action: #selector(toggleKeepAwake), keyEquivalent: "")
         toggleItem.target = self
         menu.addItem(toggleItem)
 
         menu.addItem(.separator())
 
-        let settingsItem = NSMenuItem(
-            title: "Settings...",
-            action: #selector(openSettings),
-            keyEquivalent: ","
-        )
+        let settingsItem = NSMenuItem(title: "Settings...", action: #selector(openSettings), keyEquivalent: ",")
         settingsItem.target = self
+        settingsItem.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         menu.addItem(settingsItem)
 
         menu.addItem(.separator())
 
-        let quitItem = NSMenuItem(
-            title: "Quit KeepAwake",
-            action: #selector(quitApp),
-            keyEquivalent: "q"
-        )
+        let quitItem = NSMenuItem(title: "Quit KeepAwake", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
     }
@@ -99,14 +88,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     }
 
     @objc private func openSettings() {
-        NSApp.activate(ignoringOtherApps: true)
-        // Find and show the settings window, or create it if needed
-        if let existing = NSApp.windows.first(where: { $0.title == "KeepAwake Settings" }) {
-            existing.makeKeyAndOrderFront(nil)
-        } else {
-            // Trigger SwiftUI Window scene via openWindow environment action
-            NSApp.sendAction(#selector(AppDelegate.openSettingsWindow), to: NSApp.delegate, from: nil)
-        }
+        settingsWindowController.show()
     }
 
     @objc private func quitApp() {
@@ -130,11 +112,10 @@ final class StatusBarController: NSObject, NSMenuDelegate {
 
     private func dotImage(color: NSColor) -> NSImage {
         let size = NSSize(width: 8, height: 8)
-        let image = NSImage(size: size, flipped: false) { rect in
+        return NSImage(size: size, flipped: false) { rect in
             color.setFill()
             NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1)).fill()
             return true
         }
-        return image
     }
 }
