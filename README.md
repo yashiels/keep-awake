@@ -1,8 +1,18 @@
-# KeepAwake
+<p align="center">
+  <img src="docs/icon.png" alt="KeepAwake" width="128" />
+</p>
 
-KeepAwake is a native macOS menu bar app that prevents Jamf-managed screen lock by simulating user activity. It reads MDM screensaver policies and power management timers, then sends invisible keypresses at the optimal interval so your screen never locks while you're in the zone.
+<h1 align="center">KeepAwake</h1>
 
-![KeepAwake menu bar](docs/icon.png)
+<p align="center">
+  A native macOS menu bar app that prevents Jamf-managed screen lock by simulating user activity.
+</p>
+
+<p align="center">
+  <img src="docs/menu-bar.png" alt="KeepAwake menu bar" width="400" />
+  &nbsp;&nbsp;
+  <img src="docs/settings-timing.png" alt="KeepAwake settings" width="400" />
+</p>
 
 Tools like `caffeinate`, Amphetamine, and KeepingYouAwake only prevent **system sleep** via IOKit assertions. They do **not** stop the **screensaver lock** enforced by Jamf configuration profiles. KeepAwake simulates a real `fn` keypress via System Events, which resets the `HIDIdleTime` counter that the screensaver daemon actually monitors.
 
