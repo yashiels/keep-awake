@@ -4,6 +4,11 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     private let statusItem: NSStatusItem
     private let manager: KeepAwakeManager
     private let settingsWindowController: SettingsWindowController
+    private var refreshTimer: Timer?
+
+    private var statusMenuItem: NSMenuItem?
+    private var powerMenuItem: NSMenuItem?
+    private var toggleMenuItem: NSMenuItem?
 
     init(manager: KeepAwakeManager, settingsWindowController: SettingsWindowController) {
         self.manager = manager
@@ -18,53 +23,24 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         statusItem.button?.imagePosition = .imageOnly
         let menu = NSMenu()
         menu.delegate = self
-        statusItem.menu = menu
-    }
+        menu.autoenablesItems = false
 
-    func updateIcon() {
-        guard let button = statusItem.button else { return }
-        let name = manager.isActive ? "sun.max" : "moon.zzz"
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "KeepAwake")
-        let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
-        button.image = image?.withSymbolConfiguration(config)
-        button.image?.isTemplate = true
-    }
+        let status = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        status.isEnabled = false
+        menu.addItem(status)
+        statusMenuItem = status
 
-    // MARK: - NSMenuDelegate
-
-    func menuWillOpen(_ menu: NSMenu) {
-        menu.removeAllItems()
-
-        if manager.isActive {
-            let statusItem = NSMenuItem(
-                title: "Active for \(formatUptime())",
-                action: nil, keyEquivalent: "")
-            statusItem.isEnabled = false
-            statusItem.image = dotImage(color: .systemGreen)
-            menu.addItem(statusItem)
-
-            let powerLabel = manager.isOnAC ? "AC Power" : "Battery"
-            let powerItem = NSMenuItem(
-                title: "\(powerLabel)  ·  \(Int(manager.interval))s interval",
-                action: nil, keyEquivalent: "")
-            powerItem.image = NSImage(systemSymbolName: manager.isOnAC ? "bolt.fill" : "battery.50",
-                                       accessibilityDescription: nil)
-            powerItem.isEnabled = false
-            menu.addItem(powerItem)
-        } else {
-            let pausedItem = NSMenuItem(title: "Paused", action: nil, keyEquivalent: "")
-            pausedItem.isEnabled = false
-            pausedItem.image = dotImage(color: .systemGray)
-            menu.addItem(pausedItem)
-        }
+        let power = NSMenuItem(title: "", action: nil, keyEquivalent: "")
+        power.isEnabled = false
+        menu.addItem(power)
+        powerMenuItem = power
 
         menu.addItem(.separator())
 
-        let toggleItem = NSMenuItem(
-            title: manager.isActive ? "Disable" : "Enable",
-            action: #selector(toggleKeepAwake), keyEquivalent: "")
-        toggleItem.target = self
-        menu.addItem(toggleItem)
+        let toggle = NSMenuItem(title: "Enable", action: #selector(toggleKeepAwake), keyEquivalent: "")
+        toggle.target = self
+        menu.addItem(toggle)
+        toggleMenuItem = toggle
 
         menu.addItem(.separator())
 
@@ -78,6 +54,63 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         let quitItem = NSMenuItem(title: "Quit KeepAwake", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
+
+        statusItem.menu = menu
+        updateMenuItems()
+    }
+
+    func updateIcon() {
+        guard let button = statusItem.button else { return }
+        let name = manager.isActive ? "sun.max" : "moon.zzz"
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: "KeepAwake")
+        let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
+        button.image = image?.withSymbolConfiguration(config)
+        button.image?.isTemplate = true
+    }
+
+    func refreshMenu() {
+        updateMenuItems()
+    }
+
+    // MARK: - NSMenuDelegate
+
+    func menuWillOpen(_ menu: NSMenu) {
+        updateMenuItems()
+        let timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            self?.updateMenuItems()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        refreshTimer = timer
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        refreshTimer?.invalidate()
+        refreshTimer = nil
+    }
+
+    private func updateMenuItems() {
+        if manager.isActive {
+            statusMenuItem?.title = "Active for \(formatUptime())"
+            statusMenuItem?.image = dotImage(color: .systemGreen)
+            statusMenuItem?.isHidden = false
+
+            let powerLabel = manager.isOnAC ? "AC Power" : "Battery"
+            powerMenuItem?.title = "\(powerLabel)  ·  \(Int(manager.interval))s interval"
+            powerMenuItem?.image = NSImage(
+                systemSymbolName: manager.isOnAC ? "bolt.fill" : "battery.50",
+                accessibilityDescription: nil)
+            powerMenuItem?.isHidden = false
+
+            toggleMenuItem?.title = "Disable"
+        } else {
+            statusMenuItem?.title = "Paused"
+            statusMenuItem?.image = dotImage(color: .systemGray)
+            statusMenuItem?.isHidden = false
+
+            powerMenuItem?.isHidden = true
+
+            toggleMenuItem?.title = "Enable"
+        }
     }
 
     // MARK: - Actions
@@ -85,6 +118,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     @objc private func toggleKeepAwake() {
         manager.toggle()
         updateIcon()
+        updateMenuItems()
     }
 
     @objc private func openSettings() {

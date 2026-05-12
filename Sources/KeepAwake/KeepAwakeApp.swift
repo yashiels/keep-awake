@@ -42,6 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         manager.onPowerSourceChanged = { [weak statusBar] in
             statusBar?.updateIcon()
+            statusBar?.refreshMenu()
         }
 
         if settings.startOnLaunch {

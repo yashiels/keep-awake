@@ -92,7 +92,7 @@ final class KeepAwakeManager {
         }, context)?.takeRetainedValue() else { return }
 
         powerSourceLoop = source
-        CFRunLoopAddSource(CFRunLoopGetMain(), source, .defaultMode)
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
     }
 
     private func handlePowerSourceChange() {
@@ -196,7 +196,7 @@ final class KeepAwakeManager {
 
     deinit {
         if let source = powerSourceLoop {
-            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .defaultMode)
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
         }
     }
 }
