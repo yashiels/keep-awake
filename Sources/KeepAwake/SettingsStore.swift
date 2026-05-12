@@ -23,15 +23,16 @@ final class SettingsStore {
     }
 
     var launchAtLogin: Bool {
-        didSet {
+        get { SMAppService.mainApp.status == .enabled }
+        set {
             do {
-                if launchAtLogin {
+                if newValue {
                     try SMAppService.mainApp.register()
                 } else {
                     try SMAppService.mainApp.unregister()
                 }
             } catch {
-                launchAtLogin = SMAppService.mainApp.status == .enabled
+                // SMAppService threw — SMAppService.mainApp.status is the source of truth
             }
         }
     }
@@ -43,7 +44,6 @@ final class SettingsStore {
         self.useAutoInterval = defaults.object(forKey: prefix + "useAutoInterval") as? Bool ?? true
         let manual = defaults.integer(forKey: prefix + "manualInterval")
         self.manualInterval = manual > 0 ? manual : 120
-        self.launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 
     private func key(_ name: String) -> String {
