@@ -64,8 +64,9 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         let name = manager.isActive ? "sun.max" : "moon.zzz"
         let image = NSImage(systemSymbolName: name, accessibilityDescription: "KeepAwake")
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
-        button.image = image?.withSymbolConfiguration(config)
-        button.image?.isTemplate = true
+        let configured = image?.withSymbolConfiguration(config)
+        configured?.isTemplate = true
+        button.image = configured
     }
 
     func refreshMenu() {
