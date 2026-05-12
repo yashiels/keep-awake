@@ -29,9 +29,12 @@ final class UpdateChecker {
                   let htmlURL = json["html_url"] as? String else { return }
 
             let version = tagName.hasPrefix("v") ? String(tagName.dropFirst()) : tagName
+            guard let parsed = URL(string: htmlURL),
+                  parsed.scheme == "https",
+                  parsed.host == "github.com" else { return }
             DispatchQueue.main.async {
                 self?.latestVersion = version
-                self?.releaseURL = URL(string: htmlURL)
+                self?.releaseURL = parsed
             }
         }.resume()
     }
