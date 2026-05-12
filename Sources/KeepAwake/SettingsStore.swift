@@ -6,13 +6,20 @@ final class SettingsStore {
     private let defaults: UserDefaults
     private let prefix = "com.yashiels.KeepAwake."
 
-    init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    var startOnLaunch: Bool {
+        didSet { defaults.set(startOnLaunch, forKey: key("startOnLaunch")) }
     }
 
-    var startOnLaunch: Bool {
-        get { defaults.object(forKey: key("startOnLaunch")) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: key("startOnLaunch")) }
+    var notifyOnPowerChange: Bool {
+        didSet { defaults.set(notifyOnPowerChange, forKey: key("notifyOnPowerChange")) }
+    }
+
+    var useAutoInterval: Bool {
+        didSet { defaults.set(useAutoInterval, forKey: key("useAutoInterval")) }
+    }
+
+    var manualInterval: Int {
+        didSet { defaults.set(manualInterval, forKey: key("manualInterval")) }
     }
 
     var launchAtLogin: Bool {
@@ -26,22 +33,13 @@ final class SettingsStore {
         }
     }
 
-    var notifyOnPowerChange: Bool {
-        get { defaults.object(forKey: key("notifyOnPowerChange")) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: key("notifyOnPowerChange")) }
-    }
-
-    var useAutoInterval: Bool {
-        get { defaults.object(forKey: key("useAutoInterval")) as? Bool ?? true }
-        set { defaults.set(newValue, forKey: key("useAutoInterval")) }
-    }
-
-    var manualInterval: Int {
-        get {
-            let val = defaults.integer(forKey: key("manualInterval"))
-            return val > 0 ? val : 120
-        }
-        set { defaults.set(newValue, forKey: key("manualInterval")) }
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        self.startOnLaunch = defaults.object(forKey: prefix + "startOnLaunch") as? Bool ?? true
+        self.notifyOnPowerChange = defaults.object(forKey: prefix + "notifyOnPowerChange") as? Bool ?? true
+        self.useAutoInterval = defaults.object(forKey: prefix + "useAutoInterval") as? Bool ?? true
+        let manual = defaults.integer(forKey: prefix + "manualInterval")
+        self.manualInterval = manual > 0 ? manual : 120
     }
 
     private func key(_ name: String) -> String {

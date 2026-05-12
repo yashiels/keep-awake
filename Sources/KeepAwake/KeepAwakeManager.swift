@@ -3,6 +3,7 @@ import IOKit.ps
 import IOKit.pwr_mgt
 import UserNotifications
 
+@Observable
 final class KeepAwakeManager {
     private(set) var isActive = false
     private(set) var isOnAC = true
@@ -35,6 +36,7 @@ final class KeepAwakeManager {
         self.settings = settings
         updatePowerSource()
         startPowerSourceMonitoring()
+        observeSettingsChanges()
     }
 
     func toggle() {
@@ -60,6 +62,23 @@ final class KeepAwakeManager {
         policyRefreshTimer?.invalidate()
         policyRefreshTimer = nil
         releaseDisplayAssertion()
+    }
+
+    // MARK: - Settings Observation
+
+    private func observeSettingsChanges() {
+        withObservationTracking {
+            _ = self.settings.useAutoInterval
+            _ = self.settings.manualInterval
+        } onChange: { [weak self] in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if self.isActive {
+                    self.scheduleTimer()
+                }
+                self.observeSettingsChanges()
+            }
+        }
     }
 
     // MARK: - Power Source Monitoring
