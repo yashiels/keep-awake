@@ -6,9 +6,7 @@ struct PreferencesAboutPane: View {
     @State private var iconHover = false
 
     private var versionString: String {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
-        return build.map { "\(version) (\($0))" } ?? version
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
     }
 
     var body: some View {
