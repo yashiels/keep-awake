@@ -1,5 +1,7 @@
 name: Ship
 on:
+  push:
+    branches: [never-trigger]
   workflow_dispatch:
     inputs:
       bump:
