@@ -6,8 +6,15 @@ final class KeepAwakeManagerTests: XCTestCase {
     private var detector: PolicyDetector!
     private var settings: SettingsStore!
 
+    private let prefix = "com.yashiels.KeepAwake."
+
     override func setUp() {
         super.setUp()
+        // Clean state before each test
+        for key in ["startOnLaunch", "notifyOnPowerChange", "useAutoInterval", "manualInterval"] {
+            UserDefaults.standard.removeObject(forKey: prefix + key)
+        }
+        UserDefaults.standard.synchronize()
         detector = PolicyDetector()
         detector.refresh()
         settings = SettingsStore()
@@ -61,7 +68,9 @@ final class KeepAwakeManagerTests: XCTestCase {
     func testIntervalUsesManualWhenConfigured() {
         settings.useAutoInterval = false
         settings.manualInterval = 45
-        XCTAssertEqual(manager.interval, 45)
+        UserDefaults.standard.synchronize()
+        let freshManager = KeepAwakeManager(policyDetector: detector, settings: settings)
+        XCTAssertEqual(freshManager.interval, 45)
     }
 
     func testPowerSourceIsDetected() {
