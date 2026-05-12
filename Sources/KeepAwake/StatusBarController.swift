@@ -19,12 +19,13 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         statusItem.menu = menu
     }
 
-    private func updateIcon() {
+    func updateIcon() {
         guard let button = statusItem.button else { return }
         let name = manager.isActive ? "sun.max" : "moon.zzz"
         let image = NSImage(systemSymbolName: name, accessibilityDescription: "KeepAwake")
         let config = NSImage.SymbolConfiguration(pointSize: 14, weight: .regular)
         button.image = image?.withSymbolConfiguration(config)
+        button.image?.isTemplate = true
     }
 
     // MARK: - NSMenuDelegate
@@ -32,24 +33,15 @@ final class StatusBarController: NSObject, NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) {
         menu.removeAllItems()
 
-        let toggleItem = NSMenuItem(
-            title: manager.isActive ? "Disable" : "Enable",
-            action: #selector(toggleKeepAwake),
-            keyEquivalent: ""
-        )
-        toggleItem.target = self
-        menu.addItem(toggleItem)
-
         if manager.isActive {
-            menu.addItem(.separator())
-
-            let uptimeItem = NSMenuItem(
+            let statusItem = NSMenuItem(
                 title: "Active for \(formatUptime())",
                 action: nil,
                 keyEquivalent: ""
             )
-            uptimeItem.isEnabled = false
-            menu.addItem(uptimeItem)
+            statusItem.isEnabled = false
+            statusItem.image = dotImage(color: .systemGreen)
+            menu.addItem(statusItem)
 
             let powerLabel = manager.isOnAC ? "AC Power" : "Battery"
             let powerItem = NSMenuItem(
@@ -61,18 +53,32 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             powerItem.image = NSImage(systemSymbolName: powerIcon, accessibilityDescription: nil)
             powerItem.isEnabled = false
             menu.addItem(powerItem)
+        } else {
+            let pausedItem = NSMenuItem(title: "Paused", action: nil, keyEquivalent: "")
+            pausedItem.isEnabled = false
+            pausedItem.image = dotImage(color: .systemGray)
+            menu.addItem(pausedItem)
         }
 
         menu.addItem(.separator())
 
-        let loginItem = NSMenuItem(
-            title: "Launch at Login",
-            action: #selector(toggleLaunchAtLogin),
+        let toggleItem = NSMenuItem(
+            title: manager.isActive ? "Disable" : "Enable",
+            action: #selector(toggleKeepAwake),
             keyEquivalent: ""
         )
-        loginItem.target = self
-        loginItem.state = manager.launchAtLogin ? .on : .off
-        menu.addItem(loginItem)
+        toggleItem.target = self
+        menu.addItem(toggleItem)
+
+        menu.addItem(.separator())
+
+        let settingsItem = NSMenuItem(
+            title: "Settings...",
+            action: #selector(openSettings),
+            keyEquivalent: ","
+        )
+        settingsItem.target = self
+        menu.addItem(settingsItem)
 
         menu.addItem(.separator())
 
@@ -92,8 +98,9 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         updateIcon()
     }
 
-    @objc private func toggleLaunchAtLogin() {
-        manager.launchAtLogin.toggle()
+    @objc private func openSettings() {
+        NSApp.activate(ignoringOtherApps: true)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
 
     @objc private func quitApp() {
@@ -101,7 +108,7 @@ final class StatusBarController: NSObject, NSMenuDelegate {
         NSApplication.shared.terminate(nil)
     }
 
-    // MARK: - Formatting
+    // MARK: - Helpers
 
     private func formatUptime() -> String {
         let total = Int(manager.uptime)
@@ -113,5 +120,15 @@ final class StatusBarController: NSObject, NSMenuDelegate {
             return "\(minutes)m"
         }
         return "< 1m"
+    }
+
+    private func dotImage(color: NSColor) -> NSImage {
+        let size = NSSize(width: 8, height: 8)
+        let image = NSImage(size: size, flipped: false) { rect in
+            color.setFill()
+            NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1)).fill()
+            return true
+        }
+        return image
     }
 }
