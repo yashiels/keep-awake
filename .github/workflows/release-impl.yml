@@ -99,17 +99,12 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           SHA="${{ steps.dmg.outputs.sha256 }}"
+          NOTES="### Install"$'\n'"brew install --cask yashiels/tap/keepawake"$'\n\n'"Or download the DMG below."$'\n\n'"**SHA-256:** ${SHA}"
           gh release create "v${VERSION}" \
             "${{ steps.dmg.outputs.dmg_name }}" \
             --title "KeepAwake v${VERSION}" \
             --generate-notes \
-            --notes "### Install
-          \`\`\`bash
-          brew install --cask yashiels/tap/keepawake
-          \`\`\`
-          Or download the DMG below.
-
-          **SHA-256:** \`${SHA}\`"
+            --notes "$NOTES"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -126,23 +121,27 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          cat > Casks/keepawake.rb <<CASK
-cask "keepawake" do
-  version "${VERSION}"
-  sha256 "${SHA}"
+          python3 -c "
+          v, s = '${VERSION}', '${SHA}'
+          cask = f'''cask \"keepawake\" do
+            version \"{v}\"
+            sha256 \"{s}\"
 
-  url "https://github.com/yashiels/keep-awake/releases/download/v#{version}/KeepAwake-v#{version}.dmg"
-  name "KeepAwake"
-  desc "Menu bar app to prevent Jamf-managed macOS screen lock"
-  homepage "https://github.com/yashiels/keep-awake"
+            url \"https://github.com/yashiels/keep-awake/releases/download/v#{{version}}/KeepAwake-v#{{version}}.dmg\"
+            name \"KeepAwake\"
+            desc \"Menu bar app to prevent Jamf-managed macOS screen lock\"
+            homepage \"https://github.com/yashiels/keep-awake\"
 
-  app "KeepAwake.app"
+            app \"KeepAwake.app\"
 
-  zap trash: [
-    "~/Library/Preferences/com.yashiels.KeepAwake.plist",
-  ]
-end
-CASK
+            zap trash: [
+              \"~/Library/Preferences/com.yashiels.KeepAwake.plist\",
+            ]
+          end
+          '''
+          import textwrap
+          open('Casks/keepawake.rb', 'w').write(textwrap.dedent(cask).lstrip())
+          "
 
           git add Casks/keepawake.rb
           git commit -m "chore: bump keepawake to v${VERSION}"
