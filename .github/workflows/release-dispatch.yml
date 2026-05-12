@@ -2,6 +2,8 @@ name: Release
 
 # Trigger manually from Actions tab — pick patch/minor/major
 on:
+  push:
+    branches: [never]
   workflow_dispatch:
     inputs:
       bump:
