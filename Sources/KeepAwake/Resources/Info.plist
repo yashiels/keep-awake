@@ -20,5 +20,7 @@
 	<true/>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>KeepAwake sends a key event to System Events to prevent your Mac from sleeping.</string>
 </dict>
 </plist>
