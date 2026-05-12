@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 30
     if: "!contains(github.event.head_commit.message, 'chore(release):')"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Select Xcode
         run: |
@@ -48,7 +48,7 @@ jobs:
           codesign --force --deep --sign - KeepAwake.app
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
         with:
           name: KeepAwake.app
           path: KeepAwake.app
