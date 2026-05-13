@@ -12,18 +12,22 @@ final class SettingsWindowController {
     }
 
     func show() {
+        NSApp.setActivationPolicy(.accessory)
+
         if let existing = window {
-            NSApp.activate(ignoringOtherApps: true)
             existing.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
             return
         }
 
         let view = PreferencesView(settings: settings, manager: manager)
+        let w = PreferencesTab.defaultWidth
+        let h = PreferencesTab.windowHeight
         let hostingView = NSHostingView(rootView: view)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 500, height: 480)
+        hostingView.frame = NSRect(x: 0, y: 0, width: w, height: h)
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 480),
+            contentRect: NSRect(x: 0, y: 0, width: w, height: h),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false)
@@ -31,9 +35,10 @@ final class SettingsWindowController {
         window.contentView = hostingView
         window.center()
         window.isReleasedWhenClosed = false
+        window.level = .floating
         self.window = window
 
-        NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
     }
 }

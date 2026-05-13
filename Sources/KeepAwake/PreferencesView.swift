@@ -6,7 +6,7 @@ enum PreferencesTab: String, CaseIterable, Hashable {
     case about
 
     static let defaultWidth: CGFloat = 500
-    static let windowHeight: CGFloat = 460
+    static let windowHeight: CGFloat = 620
 
     var title: String {
         switch self {
