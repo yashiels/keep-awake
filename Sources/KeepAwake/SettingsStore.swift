@@ -26,6 +26,10 @@ final class SettingsStore {
         }
     }
 
+    var skipWhenUserActive: Bool {
+        didSet { defaults.set(skipWhenUserActive, forKey: key("skipWhenUserActive")) }
+    }
+
     private var isUpdatingLaunchAtLogin = false
 
     var launchAtLogin: Bool {
@@ -53,6 +57,7 @@ final class SettingsStore {
         let manual = defaults.integer(forKey: prefix + "manualInterval")
         let rawManual = manual > 0 ? manual : 120
         self.manualInterval = max(10, min(300, rawManual))
+        self.skipWhenUserActive = defaults.object(forKey: prefix + "skipWhenUserActive") as? Bool ?? false
         self.launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 

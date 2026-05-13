@@ -68,7 +68,33 @@ final class KeepAwakeManagerTests: XCTestCase {
 
     func testPowerSourceIsDetected() {
         manager.start()
-        // isOnAC should be a valid boolean (true or false) — just verify it doesn't crash
         _ = manager.isOnAC
+    }
+
+    func testFirstTickAlwaysSimulates() {
+        settings.skipWhenUserActive = true
+        manager.start()
+        XCTAssertTrue(manager.isActive)
+    }
+
+    func testStopResetsFirstTickFlag() {
+        manager.start()
+        manager.stop()
+        manager.start()
+        XCTAssertTrue(manager.isActive)
+    }
+
+    func testSkipWhenUserActiveToggleAtRuntime() {
+        manager.start()
+        settings.skipWhenUserActive = true
+        settings.skipWhenUserActive = false
+        XCTAssertTrue(manager.isActive)
+    }
+
+    func testIsUserIdleDoesNotCrash() {
+        settings.skipWhenUserActive = true
+        settings.useAutoInterval = false
+        settings.manualInterval = 60
+        _ = manager.isUserIdle()
     }
 }

@@ -17,6 +17,7 @@ final class KeepAwakeManager {
 
     private var timer: Timer?
     private var policyRefreshTimer: Timer?
+    private var didFireFirstTick = false
     private var displayAssertionID: IOPMAssertionID = IOPMAssertionID(kIOPMNullAssertionID)
     private var powerSourceLoop: CFRunLoopSource?
     private var powerSourceContext: UnsafeMutableRawPointer?
@@ -59,6 +60,7 @@ final class KeepAwakeManager {
     func stop() {
         isActive = false
         startTime = nil
+        didFireFirstTick = false
         timer?.invalidate()
         timer = nil
         policyRefreshTimer?.invalidate()
@@ -72,6 +74,7 @@ final class KeepAwakeManager {
         withObservationTracking {
             _ = self.settings.useAutoInterval
             _ = self.settings.manualInterval
+            _ = self.settings.skipWhenUserActive
         } onChange: { [weak self] in
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -121,7 +124,35 @@ final class KeepAwakeManager {
     // MARK: - Timer
 
     private func tick() {
+        if !didFireFirstTick {
+            didFireFirstTick = true
+            simulateActivity()
+            return
+        }
+
+        guard settings.skipWhenUserActive else {
+            simulateActivity()
+            return
+        }
+
+        guard isUserIdle() else { return }
         simulateActivity()
+    }
+
+    // .combinedSessionState includes our own synthetic events — this is intentional.
+    // When skipWhenUserActive is true and the user is genuinely idle, idleSeconds ≈
+    // interval (from our last tick), which exceeds the threshold. When the user is
+    // active, their input keeps idleSeconds small and we correctly skip.
+    internal func isUserIdle() -> Bool {
+        let threshold = interval * 0.5
+        let src = CGEventSourceStateID.combinedSessionState
+        let types: [CGEventType] = [
+            .keyDown, .mouseMoved, .leftMouseDown, .rightMouseDown, .scrollWheel,
+        ]
+        let idleSeconds = types.map {
+            CGEventSource.secondsSinceLastEventType(src, eventType: $0)
+        }.min() ?? Double.greatestFiniteMagnitude
+        return idleSeconds >= threshold
     }
 
     private func scheduleTimer() {

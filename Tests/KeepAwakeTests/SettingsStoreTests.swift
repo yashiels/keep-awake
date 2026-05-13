@@ -43,4 +43,21 @@ final class SettingsStoreTests: XCTestCase {
         store.manualInterval = 60
         XCTAssertEqual(store.manualInterval, 60)
     }
+
+    func testSkipWhenUserActiveDefaultsToFalse() {
+        XCTAssertFalse(store.skipWhenUserActive)
+    }
+
+    func testSkipWhenUserActiveCanBeSet() {
+        store.skipWhenUserActive = true
+        XCTAssertTrue(store.skipWhenUserActive)
+        store.skipWhenUserActive = false
+        XCTAssertFalse(store.skipWhenUserActive)
+    }
+
+    func testSkipWhenUserActivePersistedAcrossInstances() {
+        store.skipWhenUserActive = true
+        let store2 = SettingsStore(defaults: suite)
+        XCTAssertTrue(store2.skipWhenUserActive)
+    }
 }

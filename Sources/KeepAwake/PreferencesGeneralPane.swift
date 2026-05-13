@@ -39,6 +39,20 @@ struct PreferencesGeneralPane: View {
             Divider()
 
             SettingsSection(contentSpacing: 12) {
+                Text("BEHAVIOUR")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+
+                PreferenceToggleRow(
+                    title: "Skip tick when user is active",
+                    subtitle: "Avoids sending fake keypresses while you are typing or using the mouse. Disable if your screensaver still fires while you are using the machine.",
+                    binding: $settings.skipWhenUserActive)
+            }
+
+            Divider()
+
+            SettingsSection(contentSpacing: 12) {
                 HStack {
                     Spacer()
                     Button("Quit KeepAwake") { NSApp.terminate(nil) }
