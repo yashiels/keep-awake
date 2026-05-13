@@ -27,7 +27,7 @@ struct PreferencesView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            PreferencesGeneralPane(settings: settings)
+            PreferencesGeneralPane(settings: settings, hasBattery: manager.batteryLevel != nil)
                 .tabItem { Label(PreferencesTab.general.title, systemImage: "gearshape") }
                 .tag(PreferencesTab.general)
 

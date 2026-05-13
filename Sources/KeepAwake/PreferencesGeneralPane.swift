@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PreferencesGeneralPane: View {
     @Bindable var settings: SettingsStore
+    var hasBattery: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -39,6 +40,43 @@ struct PreferencesGeneralPane: View {
                     title: "Notify on power source change",
                     subtitle: "Show a notification when switching between AC and battery power.",
                     binding: $settings.notifyOnPowerChange)
+            }
+
+            if hasBattery {
+                Divider()
+
+                SettingsSection(contentSpacing: 12) {
+                    Text("BATTERY")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    PreferenceToggleRow(
+                        title: "Pause on low battery",
+                        subtitle: "Suspend keep-awake activity when battery drops to the threshold.",
+                        binding: $settings.pauseOnLowBattery)
+
+                    if settings.pauseOnLowBattery {
+                        HStack {
+                            Text("Battery threshold")
+                                .font(.body)
+                            Spacer()
+                            Slider(
+                                value: Binding(
+                                    get: { Double(settings.batteryThreshold) },
+                                    set: { settings.batteryThreshold = Int($0) }
+                                ),
+                                in: 5...50,
+                                step: 5
+                            )
+                            .frame(maxWidth: 160)
+                            Text("\(settings.batteryThreshold)%")
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                                .frame(width: 36, alignment: .trailing)
+                        }
+                    }
+                }
             }
 
             Divider()

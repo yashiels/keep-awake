@@ -9,6 +9,8 @@ final class KeepAwakeManager {
     private(set) var isActive = false
     private(set) var isOnAC = true
     private(set) var isScreenLocked = false
+    private(set) var batteryLevel: Int?
+    private(set) var isSuppressedByBattery = false
     private(set) var startTime: Date?
 
     let policyDetector: PolicyDetector
@@ -20,6 +22,7 @@ final class KeepAwakeManager {
     private var policyRefreshTimer: Timer?
     private var screenLockTimer: Timer?
     private var didFireFirstTick = false
+    private var powerSourceDebounce: DispatchWorkItem?
     private var displayAssertionID: IOPMAssertionID = IOPMAssertionID(kIOPMNullAssertionID)
     private var powerSourceLoop: CFRunLoopSource?
     private var powerSourceContext: UnsafeMutableRawPointer?
@@ -133,6 +136,15 @@ final class KeepAwakeManager {
     }
 
     private func handlePowerSourceChange() {
+        powerSourceDebounce?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.handlePowerSourceChangeDebounced()
+        }
+        powerSourceDebounce = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
+    }
+
+    private func handlePowerSourceChangeDebounced() {
         let wasOnAC = isOnAC
         updatePowerSource()
         guard wasOnAC != isOnAC else { return }
@@ -151,6 +163,23 @@ final class KeepAwakeManager {
     // MARK: - Timer
 
     private func tick() {
+        let shouldSuppress = shouldSuppressForBattery()
+
+        if shouldSuppress && !isSuppressedByBattery {
+            isSuppressedByBattery = true
+            releaseDisplayAssertion()
+            if settings.notifyOnPowerChange { sendSuppressionNotification(paused: true) }
+            return
+        }
+
+        if !shouldSuppress && isSuppressedByBattery {
+            isSuppressedByBattery = false
+            createDisplayAssertion()
+            if settings.notifyOnPowerChange { sendSuppressionNotification(paused: false) }
+        }
+
+        if isSuppressedByBattery { return }
+
         if !didFireFirstTick {
             didFireFirstTick = true
             simulateActivity()
@@ -164,6 +193,14 @@ final class KeepAwakeManager {
 
         guard isUserIdle() else { return }
         simulateActivity()
+    }
+
+    private func shouldSuppressForBattery() -> Bool {
+        guard settings.pauseOnLowBattery, let level = batteryLevel else { return false }
+        if isSuppressedByBattery {
+            return level < settings.batteryThreshold + 5
+        }
+        return level <= settings.batteryThreshold
     }
 
     // .combinedSessionState includes our own synthetic events — this is intentional.
@@ -272,10 +309,25 @@ final class KeepAwakeManager {
               let sources = IOPSCopyPowerSourcesList(snapshot)?.takeRetainedValue() as? [Any],
               !sources.isEmpty else {
             isOnAC = true
+            batteryLevel = nil
             return
         }
         let type = IOPSGetProvidingPowerSourceType(snapshot)?.takeRetainedValue() as String?
         isOnAC = type == kIOPSACPowerValue
+        batteryLevel = readBatteryLevel(from: snapshot, sources: sources)
+    }
+
+    // IOPSGetPowerSourceDescription returns +0 ownership — do NOT call .takeRetainedValue()
+    private func readBatteryLevel(from snapshot: CFTypeRef, sources: [Any]) -> Int? {
+        for source in sources {
+            guard let desc = IOPSGetPowerSourceDescription(snapshot, source as CFTypeRef)?
+                                .takeUnretainedValue() as? [String: Any],
+                  let sourceType = desc[kIOPSTypeKey] as? String,
+                  sourceType == kIOPSInternalBatteryType,
+                  let capacity = desc[kIOPSCurrentCapacityKey] as? Int else { continue }
+            return capacity
+        }
+        return nil
     }
 
     // MARK: - Display Assertion
@@ -303,6 +355,20 @@ final class KeepAwakeManager {
         content.body = isOnAC
             ? "Switched to AC Power — interval \(Int(interval))s"
             : "Switched to Battery — interval \(Int(interval))s"
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+
+    private func sendSuppressionNotification(paused: Bool) {
+        let content = UNMutableNotificationContent()
+        content.title = "KeepAwake"
+        if paused {
+            let level = batteryLevel.map { "\($0)%" } ?? "low"
+            content.body = "Paused — battery at \(level) (≤ \(settings.batteryThreshold)%)"
+        } else {
+            let level = batteryLevel.map { "\($0)%" } ?? "sufficient"
+            content.body = "Resumed — battery at \(level)"
+        }
         let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request)
     }

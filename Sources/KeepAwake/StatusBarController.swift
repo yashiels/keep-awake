@@ -97,6 +97,17 @@ final class StatusBarController: NSObject, NSMenuDelegate {
                 statusMenuItem?.isHidden = false
                 powerMenuItem?.isHidden = true
                 toggleMenuItem?.title = "Disable"
+            } else if manager.isSuppressedByBattery {
+                let level = manager.batteryLevel.map { "\($0)%" } ?? "low"
+                statusMenuItem?.title = "Paused — battery \(level)"
+                statusMenuItem?.image = dotImage(color: .systemOrange)
+                statusMenuItem?.isHidden = false
+                powerMenuItem?.title = "Battery \(level)  ·  \(Int(manager.interval))s interval"
+                powerMenuItem?.image = NSImage(
+                    systemSymbolName: "battery.25",
+                    accessibilityDescription: nil)
+                powerMenuItem?.isHidden = false
+                toggleMenuItem?.title = "Disable"
             } else {
                 statusMenuItem?.title = "Active for \(formatUptime())"
                 statusMenuItem?.image = dotImage(color: .systemGreen)

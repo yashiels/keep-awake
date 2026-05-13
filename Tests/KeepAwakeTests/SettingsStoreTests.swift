@@ -70,4 +70,34 @@ final class SettingsStoreTests: XCTestCase {
         let store2 = SettingsStore(defaults: suite)
         XCTAssertFalse(store2.pauseWhenLocked)
     }
+
+    func testPauseOnLowBatteryDefaultsToFalse() {
+        XCTAssertFalse(store.pauseOnLowBattery)
+    }
+
+    func testPauseOnLowBatteryPersists() {
+        store.pauseOnLowBattery = true
+        let store2 = SettingsStore(defaults: suite)
+        XCTAssertTrue(store2.pauseOnLowBattery)
+    }
+
+    func testBatteryThresholdDefaultsTo20() {
+        XCTAssertEqual(store.batteryThreshold, 20)
+    }
+
+    func testBatteryThresholdClampsLow() {
+        store.batteryThreshold = 2
+        XCTAssertEqual(store.batteryThreshold, 5)
+    }
+
+    func testBatteryThresholdClampsHigh() {
+        store.batteryThreshold = 100
+        XCTAssertEqual(store.batteryThreshold, 50)
+    }
+
+    func testBatteryThresholdPersists() {
+        store.batteryThreshold = 30
+        let store2 = SettingsStore(defaults: suite)
+        XCTAssertEqual(store2.batteryThreshold, 30)
+    }
 }

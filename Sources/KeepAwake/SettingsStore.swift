@@ -34,6 +34,18 @@ final class SettingsStore {
         didSet { defaults.set(pauseWhenLocked, forKey: key("pauseWhenLocked")) }
     }
 
+    var pauseOnLowBattery: Bool {
+        didSet { defaults.set(pauseOnLowBattery, forKey: key("pauseOnLowBattery")) }
+    }
+
+    var batteryThreshold: Int {
+        didSet {
+            let clamped = max(5, min(50, batteryThreshold))
+            if clamped != batteryThreshold { batteryThreshold = clamped }
+            defaults.set(batteryThreshold, forKey: key("batteryThreshold"))
+        }
+    }
+
     private var isUpdatingLaunchAtLogin = false
 
     var launchAtLogin: Bool {
@@ -63,6 +75,9 @@ final class SettingsStore {
         self.manualInterval = max(10, min(300, rawManual))
         self.skipWhenUserActive = defaults.object(forKey: prefix + "skipWhenUserActive") as? Bool ?? false
         self.pauseWhenLocked = defaults.object(forKey: prefix + "pauseWhenLocked") as? Bool ?? true
+        self.pauseOnLowBattery = defaults.object(forKey: prefix + "pauseOnLowBattery") as? Bool ?? false
+        let rawThreshold = defaults.integer(forKey: prefix + "batteryThreshold")
+        self.batteryThreshold = rawThreshold > 0 ? max(5, min(50, rawThreshold)) : 20
         self.launchAtLogin = SMAppService.mainApp.status == .enabled
     }
 

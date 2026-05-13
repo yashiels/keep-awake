@@ -116,4 +116,33 @@ final class KeepAwakeManagerTests: XCTestCase {
         XCTAssertTrue(manager.isActive)
         XCTAssertFalse(manager.isScreenLocked)
     }
+
+    func testBatterySuppressionInitiallyFalse() {
+        XCTAssertFalse(manager.isSuppressedByBattery)
+    }
+
+    func testBatteryLevelDetected() {
+        _ = manager.batteryLevel
+    }
+
+    func testStartWithPauseOnLowBatteryDisabled() {
+        settings.pauseOnLowBattery = false
+        manager.start()
+        XCTAssertTrue(manager.isActive)
+        XCTAssertFalse(manager.isSuppressedByBattery)
+    }
+
+    func testStartWithPauseOnLowBatteryEnabled() {
+        settings.pauseOnLowBattery = true
+        settings.batteryThreshold = 20
+        manager.start()
+        XCTAssertTrue(manager.isActive)
+    }
+
+    func testStopResetsBatterySuppression() {
+        settings.pauseOnLowBattery = true
+        manager.start()
+        manager.stop()
+        XCTAssertFalse(manager.isSuppressedByBattery)
+    }
 }
