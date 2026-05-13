@@ -60,4 +60,14 @@ final class SettingsStoreTests: XCTestCase {
         let store2 = SettingsStore(defaults: suite)
         XCTAssertTrue(store2.skipWhenUserActive)
     }
+
+    func testPauseWhenLockedDefaultsToTrue() {
+        XCTAssertTrue(store.pauseWhenLocked)
+    }
+
+    func testPauseWhenLockedPersists() {
+        store.pauseWhenLocked = false
+        let store2 = SettingsStore(defaults: suite)
+        XCTAssertFalse(store2.pauseWhenLocked)
+    }
 }

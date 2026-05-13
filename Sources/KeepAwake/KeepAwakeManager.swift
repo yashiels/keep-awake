@@ -8,6 +8,7 @@ import CoreGraphics
 final class KeepAwakeManager {
     private(set) var isActive = false
     private(set) var isOnAC = true
+    private(set) var isScreenLocked = false
     private(set) var startTime: Date?
 
     let policyDetector: PolicyDetector
@@ -17,6 +18,7 @@ final class KeepAwakeManager {
 
     private var timer: Timer?
     private var policyRefreshTimer: Timer?
+    private var screenLockTimer: Timer?
     private var didFireFirstTick = false
     private var displayAssertionID: IOPMAssertionID = IOPMAssertionID(kIOPMNullAssertionID)
     private var powerSourceLoop: CFRunLoopSource?
@@ -51,20 +53,30 @@ final class KeepAwakeManager {
         startTime = Date()
         updatePowerSource()
         policyDetector.refresh()
+        startScreenLockPolling()
+        schedulePolicyRefresh()
+
+        if settings.pauseWhenLocked && isSessionLocked() {
+            isScreenLocked = true
+            return
+        }
+
         createDisplayAssertion()
         tick()
         scheduleTimer()
-        schedulePolicyRefresh()
     }
 
     func stop() {
         isActive = false
+        isScreenLocked = false
         startTime = nil
         didFireFirstTick = false
         timer?.invalidate()
         timer = nil
         policyRefreshTimer?.invalidate()
         policyRefreshTimer = nil
+        screenLockTimer?.invalidate()
+        screenLockTimer = nil
         releaseDisplayAssertion()
     }
 
@@ -75,12 +87,27 @@ final class KeepAwakeManager {
             _ = self.settings.useAutoInterval
             _ = self.settings.manualInterval
             _ = self.settings.skipWhenUserActive
+            _ = self.settings.pauseWhenLocked
         } onChange: { [weak self] in
             DispatchQueue.main.async {
-                guard let self else { return }
-                if self.isActive {
-                    self.scheduleTimer()
+                guard let self else {
+                    self?.observeSettingsChanges()
+                    return
                 }
+                guard self.isActive else {
+                    self.observeSettingsChanges()
+                    return
+                }
+
+                if self.settings.pauseWhenLocked {
+                    self.startScreenLockPolling()
+                    if self.isScreenLocked { self.pauseForScreenLock() }
+                } else {
+                    self.stopScreenLockPolling()
+                    if self.isScreenLocked { self.resumeFromScreenLock() }
+                }
+
+                self.scheduleTimer()
                 self.observeSettingsChanges()
             }
         }
@@ -114,7 +141,7 @@ final class KeepAwakeManager {
             sendPowerChangeNotification()
         }
 
-        if isActive {
+        if isActive && !isScreenLocked {
             scheduleTimer()
         }
 
@@ -165,9 +192,54 @@ final class KeepAwakeManager {
     private func schedulePolicyRefresh() {
         policyRefreshTimer?.invalidate()
         policyRefreshTimer = Timer.scheduledTimer(withTimeInterval: 300, repeats: true) { [weak self] _ in
-            self?.policyDetector.refresh()
-            self?.scheduleTimer()
+            guard let self, !self.isScreenLocked else { return }
+            self.policyDetector.refresh()
+            self.scheduleTimer()
         }
+    }
+
+    // MARK: - Screen Lock Detection
+
+    private func isSessionLocked() -> Bool {
+        guard let info = CGSessionCopyCurrentDictionary() as? [String: Any] else { return false }
+        return info["CGSSessionScreenIsLocked"] as? Bool ?? false
+    }
+
+    private func startScreenLockPolling() {
+        guard settings.pauseWhenLocked else { return }
+        screenLockTimer?.invalidate()
+        screenLockTimer = Timer.scheduledTimer(withTimeInterval: 5, repeats: true) { [weak self] _ in
+            self?.checkScreenLock()
+        }
+    }
+
+    private func stopScreenLockPolling() {
+        screenLockTimer?.invalidate()
+        screenLockTimer = nil
+    }
+
+    private func checkScreenLock() {
+        guard settings.pauseWhenLocked else { return }
+        let locked = isSessionLocked()
+        if locked && !isScreenLocked {
+            pauseForScreenLock()
+        } else if !locked && isScreenLocked {
+            resumeFromScreenLock()
+        }
+    }
+
+    private func pauseForScreenLock() {
+        isScreenLocked = true
+        timer?.invalidate()
+        timer = nil
+        releaseDisplayAssertion()
+    }
+
+    private func resumeFromScreenLock() {
+        isScreenLocked = false
+        createDisplayAssertion()
+        tick()
+        scheduleTimer()
     }
 
     // MARK: - Activity Simulation

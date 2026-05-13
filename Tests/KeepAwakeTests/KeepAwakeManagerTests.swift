@@ -97,4 +97,23 @@ final class KeepAwakeManagerTests: XCTestCase {
         settings.manualInterval = 60
         _ = manager.isUserIdle()
     }
+
+    func testScreenLockInitiallyFalse() {
+        XCTAssertFalse(manager.isScreenLocked)
+    }
+
+    func testStopWhileLockedResetsState() {
+        manager.start()
+        XCTAssertTrue(manager.isActive)
+        manager.stop()
+        XCTAssertFalse(manager.isActive)
+        XCTAssertFalse(manager.isScreenLocked)
+    }
+
+    func testStartWithPauseWhenLockedDisabled() {
+        settings.pauseWhenLocked = false
+        manager.start()
+        XCTAssertTrue(manager.isActive)
+        XCTAssertFalse(manager.isScreenLocked)
+    }
 }

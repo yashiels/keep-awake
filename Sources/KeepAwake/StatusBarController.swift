@@ -91,18 +91,26 @@ final class StatusBarController: NSObject, NSMenuDelegate {
 
     private func updateMenuItems() {
         if manager.isActive {
-            statusMenuItem?.title = "Active for \(formatUptime())"
-            statusMenuItem?.image = dotImage(color: .systemGreen)
-            statusMenuItem?.isHidden = false
+            if manager.isScreenLocked {
+                statusMenuItem?.title = "Paused — screen locked"
+                statusMenuItem?.image = dotImage(color: .systemOrange)
+                statusMenuItem?.isHidden = false
+                powerMenuItem?.isHidden = true
+                toggleMenuItem?.title = "Disable"
+            } else {
+                statusMenuItem?.title = "Active for \(formatUptime())"
+                statusMenuItem?.image = dotImage(color: .systemGreen)
+                statusMenuItem?.isHidden = false
 
-            let powerLabel = manager.isOnAC ? "AC Power" : "Battery"
-            powerMenuItem?.title = "\(powerLabel)  ·  \(Int(manager.interval))s interval"
-            powerMenuItem?.image = NSImage(
-                systemSymbolName: manager.isOnAC ? "bolt.fill" : "battery.50",
-                accessibilityDescription: nil)
-            powerMenuItem?.isHidden = false
+                let powerLabel = manager.isOnAC ? "AC Power" : "Battery"
+                powerMenuItem?.title = "\(powerLabel)  ·  \(Int(manager.interval))s interval"
+                powerMenuItem?.image = NSImage(
+                    systemSymbolName: manager.isOnAC ? "bolt.fill" : "battery.50",
+                    accessibilityDescription: nil)
+                powerMenuItem?.isHidden = false
 
-            toggleMenuItem?.title = "Disable"
+                toggleMenuItem?.title = "Disable"
+            }
         } else {
             statusMenuItem?.title = "Paused"
             statusMenuItem?.image = dotImage(color: .systemGray)

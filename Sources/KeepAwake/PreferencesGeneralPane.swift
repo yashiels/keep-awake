@@ -17,6 +17,11 @@ struct PreferencesGeneralPane: View {
                     binding: $settings.startOnLaunch)
 
                 PreferenceToggleRow(
+                    title: "Pause when screen is locked",
+                    subtitle: "Automatically pause activity simulation while the screen is locked.",
+                    binding: $settings.pauseWhenLocked)
+
+                PreferenceToggleRow(
                     title: "Launch at Login",
                     subtitle: "Open KeepAwake automatically when you log in.",
                     binding: $settings.launchAtLogin)
