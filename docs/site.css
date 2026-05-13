@@ -520,6 +520,10 @@ a { color: inherit; text-decoration: none; }
   position: relative;
 }
 
+.steps.steps-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
 .steps::before {
   content: '';
   position: absolute;
@@ -655,6 +659,7 @@ a { color: inherit; text-decoration: none; }
   .versus { grid-template-columns: 1fr; }
   .feature-grid { grid-template-columns: 1fr; }
   .steps { grid-template-columns: 1fr 1fr; gap: 24px; }
+  .steps.steps-5 { grid-template-columns: 1fr 1fr; }
   .steps::before { display: none; }
   .detail-grid { grid-template-columns: 1fr; }
 }

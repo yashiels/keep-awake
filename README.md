@@ -42,25 +42,29 @@ KeepAwake's menu bar shows live status and adapts automatically:
 - Real-time power source detection via IOKit callbacks — interval adjusts instantly when you plug in or unplug, even while the menu is open.
 - Auto-detects MDM screensaver profiles at `/Library/Managed Preferences` and parses `pmset` power timers.
 - Calculates 80% of the shortest detected timer as the keep-alive interval, clamped between 10s and 300s.
-- Sends `fn` key (key code 63) via System Events on each tick — no visible effect, no modifier conflict.
-- Holds an IOKit display sleep assertion on battery to prevent display sleep independently.
+- Sends `fn` key (key code 63) via CGEvent — no visible effect, no modifier conflict, no subprocess.
+- Holds an IOKit display sleep assertion to prevent display sleep independently.
+- **Auto-pauses when screen is locked** — stops ticking and releases the display assertion while the screen is locked, resumes immediately on unlock.
+- **Idle detection override** — optionally skips fake keypresses while you're actively typing or using the mouse, only simulating when you're truly idle.
+- **Battery threshold auto-disable** — pauses keep-awake when battery drops below a configurable threshold (5–50%), with 5% hysteresis to prevent toggling.
 
 ## Settings
 
 The native Settings window has three tabs:
 
-- **General** — Start active on launch, Launch at Login, power change notifications, quit.
+- **General** — Start active on launch, Launch at Login, pause when screen is locked, power change notifications, battery threshold with slider, skip tick when user is active, quit.
 - **Timing** — Switch between Automatic and Manual interval modes. Manual lets you set a custom interval (10–300s). Changes take effect immediately on the running timer. Detected MDM policies and pmset timers are displayed.
 - **About** — Version, update checker (checks GitHub releases), project link.
 
 ## How It Works
 
-Each tick follows four steps:
+Each tick follows these steps:
 
 1. **Detect** — Read MDM screensaver profile and pmset sleep timers.
 2. **Calculate** — Pick the shortest timer, fire at 80% of that value.
-3. **Simulate** — Send `fn` keypress via System Events to reset HIDIdleTime.
-4. **Adapt** — IOKit callback detects power source change, adjust interval instantly.
+3. **Guard** — Check screen lock state, battery level, and user activity before proceeding.
+4. **Simulate** — Send `fn` keypress via CGEvent to reset HIDIdleTime.
+5. **Adapt** — IOKit callback detects power source change, adjust interval instantly.
 
 ## Privacy
 

@@ -13,7 +13,7 @@
     <meta name="twitter:card" content="summary" />
     <link rel="icon" href="./icon.png" type="image/png" />
     <link rel="apple-touch-icon" href="./icon.png" />
-    <link rel="stylesheet" href="./site.css?v=2" />
+    <link rel="stylesheet" href="./site.css?v=3" />
   </head>
   <body>
 
@@ -42,8 +42,9 @@
           <h1>Your Mac stays awake.<br><span class="glow">MDM can't touch this.</span></h1>
           <p class="subtitle">
             KeepAwake reads Jamf screensaver policies and power management timers,
-            then simulates invisible user activity at the optimal interval &mdash;
-            so your screen never locks while you're in the zone.
+            then simulates invisible user activity at the optimal interval.
+            Auto-pauses when your screen locks, skips ticks while you're active,
+            and backs off on low battery &mdash; zero effort, zero footprint.
           </p>
           <div class="actions">
             <a class="btn primary lg" href="https://github.com/yashiels/keep-awake/releases/latest">
@@ -113,21 +114,39 @@
           </div>
           <div class="f-cell">
             <span class="pip"></span>
+            <span class="icon">&#128274;</span>
+            <h3>Screen Lock Auto-Pause</h3>
+            <p>Detects when your screen is locked and pauses all activity. Releases the display assertion while away, resumes instantly on unlock.</p>
+          </div>
+          <div class="f-cell">
+            <span class="pip"></span>
+            <span class="icon">&#9995;</span>
+            <h3>Idle Detection Override</h3>
+            <p>Skips fake keypresses while you're typing or using the mouse. Only simulates activity when you're truly idle &mdash; no interference.</p>
+          </div>
+          <div class="f-cell">
+            <span class="pip"></span>
+            <span class="icon">&#128267;</span>
+            <h3>Battery Threshold</h3>
+            <p>Auto-disables when battery drops below your threshold (5&ndash;50%). 5% hysteresis prevents rapid toggling. Resumes when charged.</p>
+          </div>
+          <div class="f-cell">
+            <span class="pip"></span>
             <span class="icon">&#9788;</span>
             <h3>Invisible Activity</h3>
-            <p>Sends <code>fn</code> key (code 63) via System Events. No visible effect, no modifier conflict. Just a silent idle reset.</p>
+            <p>Sends <code>fn</code> key (code 63) via CGEvent. No visible effect, no modifier conflict. Just a silent idle reset.</p>
           </div>
           <div class="f-cell">
             <span class="pip"></span>
             <span class="icon">&#9881;</span>
             <h3>Native Settings</h3>
-            <p>General, Timing, and About tabs. Toggle start-on-launch, launch-at-login, manual intervals, and update checking.</p>
+            <p>General, Timing, and About tabs. Configure lock behaviour, battery threshold, idle detection, intervals, and launch preferences.</p>
           </div>
           <div class="f-cell">
             <span class="pip"></span>
-            <span class="icon">&#128274;</span>
+            <span class="icon">&#128737;</span>
             <h3>Display Sleep Guard</h3>
-            <p>Holds an IOPMAssertion on battery to prevent display sleep independently of the screensaver bypass.</p>
+            <p>Holds an IOPMAssertion to prevent display sleep independently. Automatically released during screen lock and battery suppression.</p>
           </div>
         </div>
       </section>
@@ -137,8 +156,8 @@
       <!-- HOW IT WORKS -->
       <section class="pipeline wrap">
         <span class="tag">// pipeline</span>
-        <h2>Four steps, every tick</h2>
-        <div class="steps">
+        <h2>Five steps, every tick</h2>
+        <div class="steps steps-5">
           <div class="step">
             <div class="step-ring">01</div>
             <h3>Detect</h3>
@@ -151,11 +170,16 @@
           </div>
           <div class="step">
             <div class="step-ring">03</div>
-            <h3>Simulate</h3>
-            <p>Send fn keypress via System Events to reset HIDIdleTime</p>
+            <h3>Guard</h3>
+            <p>Check screen lock, battery level, and user activity</p>
           </div>
           <div class="step">
             <div class="step-ring">04</div>
+            <h3>Simulate</h3>
+            <p>Send fn keypress via CGEvent to reset HIDIdleTime</p>
+          </div>
+          <div class="step">
+            <div class="step-ring">05</div>
             <h3>Adapt</h3>
             <p>IOKit callback detects power change, adjust interval instantly</p>
           </div>
@@ -178,21 +202,21 @@
           <div class="d-cell">
             <h3>Menu bar</h3>
             <p>
-              Sun icon when active, moon when paused. Click for uptime,
-              power source, interval, and quick toggle. Settings one click away.
+              Sun icon when active, moon when paused. Green dot for active,
+              orange for paused (locked or low battery), grey for disabled.
             </p>
           </div>
           <div class="d-cell">
             <h3>Privacy</h3>
             <p>
               Zero analytics. Zero telemetry. No network calls except optional
-              GitHub update checks. Reads only managed preferences and power state.
+              GitHub update checks. Screen lock detection uses local polling &mdash; no traces.
             </p>
           </div>
           <div class="d-cell">
             <h3>Permissions</h3>
             <p>
-              Accessibility access for System Events key simulation.
+              Accessibility access for CGEvent key simulation.
               No Full Disk Access. No admin rights needed to read MDM policies.
             </p>
           </div>
