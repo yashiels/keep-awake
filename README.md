@@ -1,20 +1,8 @@
-<p align="center">
-  <img src="docs/icon.png" alt="KeepAwake" width="128" />
-</p>
+# 💤 KeepAwake — keep your Mac awake when Jamf won't let you
 
-<h1 align="center">KeepAwake</h1>
+A native macOS menu bar app that prevents Jamf-managed screen lock by simulating user activity. Tools like `caffeinate`, Amphetamine, and KeepingYouAwake only prevent **system sleep** via IOKit assertions. They do **not** stop the **screensaver lock** enforced by Jamf configuration profiles. KeepAwake simulates a real `fn` keypress via System Events, which resets the `HIDIdleTime` counter that the screensaver daemon actually monitors.
 
-<p align="center">
-  A native macOS menu bar app that prevents Jamf-managed screen lock by simulating user activity.
-</p>
-
-<p align="center">
-  <img src="docs/menu-bar.png" alt="KeepAwake menu bar" width="400" />
-  &nbsp;&nbsp;
-  <img src="docs/settings-timing.png" alt="KeepAwake settings" width="400" />
-</p>
-
-Tools like `caffeinate`, Amphetamine, and KeepingYouAwake only prevent **system sleep** via IOKit assertions. They do **not** stop the **screensaver lock** enforced by Jamf configuration profiles. KeepAwake simulates a real `fn` keypress via System Events, which resets the `HIDIdleTime` counter that the screensaver daemon actually monitors.
+![KeepAwake menu bar](docs/menu-bar.png)
 
 ## Install
 
@@ -33,6 +21,14 @@ make run        # build and launch
 make install    # copy to /Applications
 make dmg        # create DMG installer
 ```
+
+## Quick Start
+
+1. Install via Homebrew or download the DMG from the [latest release](https://github.com/yashiels/keep-awake/releases/latest).
+2. Open **KeepAwake.app** — it appears in the menu bar (sun icon = active, moon = paused).
+3. Grant **Accessibility** access when prompted (required for key simulation).
+4. Click the menu bar icon to see uptime, power source, interval, and quick-toggle.
+5. Open **Settings** to configure timing, battery threshold, launch-at-login, and more.
 
 ## What It Does
 
@@ -55,6 +51,8 @@ The native Settings window has three tabs:
 - **General** — Start active on launch, Launch at Login, pause when screen is locked, power change notifications, battery threshold with slider, skip tick when user is active, quit.
 - **Timing** — Switch between Automatic and Manual interval modes. Manual lets you set a custom interval (10–300s). Changes take effect immediately on the running timer. Detected MDM policies and pmset timers are displayed.
 - **About** — Version, update checker (checks GitHub releases), project link.
+
+![KeepAwake settings](docs/settings-timing.png)
 
 ## How It Works
 
@@ -83,6 +81,9 @@ Requirements:
 ```bash
 make build      # compile release binary
 make test       # run unit tests (parallel)
+make lint       # run swiftlint (or swift build warnings fallback)
+make fmt        # run swiftformat
+make ci         # lint + test (PR gate)
 make bundle     # create signed .app bundle
 make dmg        # create DMG installer
 make release    # create release DMG with SHA256
@@ -91,19 +92,23 @@ make clean      # remove build artifacts
 
 Releases are automated via GitHub Actions. Go to **Actions > Ship**, pick `patch`, `minor`, or `major` — it bumps the version, builds, tests, creates a DMG, publishes a GitHub release, and updates the [Homebrew tap](https://github.com/yashiels/homebrew-tap).
 
+A lightweight shell script alternative is available in `scripts/keep-awake.sh` for environments where installing an app isn't practical.
+
 ## Project Layout
 
-- `Sources/KeepAwake/` — App entry point, menu bar controller, settings window, preferences panes.
-- `Sources/KeepAwake/KeepAwakeManager.swift` — Core timer, power source monitoring, activity simulation.
-- `Sources/KeepAwake/PolicyDetector.swift` — MDM profile and pmset parser.
-- `Sources/KeepAwake/SettingsStore.swift` — Observable settings with UserDefaults persistence.
-- `Tests/KeepAwakeTests/` — Unit tests for manager, policy detector, and settings.
-- `docs/` — Marketing website (GitHub Pages).
-- `scripts/` — Shell script alternative and icon generator.
+```
+Sources/KeepAwake/
+├── KeepAwakeApp.swift          # App entry point, menu bar setup
+├── KeepAwakeManager.swift      # Core timer, power source monitoring, activity simulation
+├── PolicyDetector.swift        # MDM profile and pmset parser
+├── SettingsStore.swift         # Observable settings with UserDefaults persistence
+├── StatusBarController.swift   # Menu bar icon and menu
+└── UpdateChecker.swift         # GitHub release update checks
 
-## Shell Script
-
-A lightweight shell script alternative is available in `scripts/keep-awake.sh` for environments where installing an app isn't practical.
+Tests/KeepAwakeTests/           # Unit tests for manager, policy detector, settings
+docs/                           # Marketing website (GitHub Pages)
+scripts/                        # Shell script alternative and icon generator
+```
 
 ## License
 

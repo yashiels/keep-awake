@@ -6,7 +6,7 @@ APP_BUNDLE = $(APP_NAME).app
 DMG_NAME = $(APP_NAME)-v$(MARKETING_VERSION).dmg
 INSTALL_DIR = /Applications
 
-.PHONY: build test icon bundle install run dmg release clean
+.PHONY: build test icon bundle install run dmg release clean fmt lint ci
 
 build:
 	swift build -c release
@@ -46,3 +46,11 @@ release: dmg
 clean:
 	rm -rf $(APP_BUNDLE) *.dmg *.zip
 	swift package clean
+
+fmt:
+	@command -v swiftformat >/dev/null 2>&1 && swiftformat Sources/ Tests/ Package.swift || echo "⚠️  swiftformat not installed — run: brew install swiftformat"
+
+lint:
+	@command -v swiftlint >/dev/null 2>&1 && swiftlint lint Sources/ --strict --quiet || (echo "⚠️  swiftlint not installed — run: brew install swiftlint"; swift build 2>&1 | grep -i warning || true)
+
+ci: lint test
