@@ -117,19 +117,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Update Homebrew tap
+      - name: Update Homebrew tap (signed commit)
         env:
-          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          # HOMEBREW_TAP_TOKEN is owned by a bypass user, so createCommitOnBranch
+          # lands a GitHub-signed ("Verified") commit that also satisfies the
+          # tap's branch ruleset — unlike a plain github-actions[bot] git push.
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
+          set -euo pipefail
           VERSION="${{ steps.version.outputs.version }}"
           SHA="${{ steps.dmg.outputs.sha256 }}"
+          TAP="yashiels/homebrew-tap"
+          BRANCH="main"
 
-          WORK=$(mktemp -d)
-          git clone "https://github.com/yashiels/homebrew-tap.git" "$WORK"
-          cd "$WORK"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
+          CASK_FILE=$(mktemp)
           python3 -c "
           v, s = '${VERSION}', '${SHA}'
           cask = f'''cask \"keepawake\" do
@@ -153,14 +154,33 @@ jobs:
           end
           '''
           import textwrap
-          open('Casks/keepawake.rb', 'w').write(textwrap.dedent(cask).lstrip())
+          open('${CASK_FILE}', 'w').write(textwrap.dedent(cask).lstrip())
           "
 
-          git add Casks/keepawake.rb
-          git commit -m "chore: bump keepawake to v${VERSION}"
-          git remote set-url origin "https://x-access-token:${TAP_TOKEN}@github.com/yashiels/homebrew-tap.git"
-          git push origin main
-          echo "Homebrew tap updated to v${VERSION}"
+          b64=$(base64 < "$CASK_FILE" | tr -d '\n')
+
+          # Commits created through the GraphQL API are GPG-signed by GitHub's
+          # web-flow key and land as "Verified". Retry on a stale expectedHeadOid
+          # in case the tap branch moves between the ref read and the mutation.
+          for attempt in 1 2 3 4 5; do
+            oid=$(gh api "repos/${TAP}/git/ref/heads/${BRANCH}" --jq '.object.sha')
+            payload=$(jq -n \
+              --arg repo "$TAP" --arg branch "$BRANCH" --arg oid "$oid" \
+              --arg headline "keepawake: update cask for v${VERSION}" \
+              --arg path "Casks/keepawake.rb" --arg c "$b64" \
+              '{query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { url } } }",
+                variables: {input: {branch: {repositoryNameWithOwner: $repo, branchName: $branch}, expectedHeadOid: $oid, message: {headline: $headline}, fileChanges: {additions: [{path: $path, contents: $c}]}}}}')
+            if out=$(printf '%s' "$payload" | gh api graphql --input - 2>&1); then
+              url=$(printf '%s' "$out" | jq -r '.data.createCommitOnBranch.commit.url // empty')
+              if [ -n "$url" ]; then echo "Homebrew tap updated (verified): $url"; exit 0; fi
+              echo "attempt $attempt: no commit in response: $out"
+            else
+              echo "attempt $attempt failed: $out"
+            fi
+            sleep $((attempt * 2))
+          done
+          echo "Failed to update Homebrew tap after retries" >&2
+          exit 1
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4
