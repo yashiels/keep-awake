@@ -65,7 +65,7 @@ jobs:
           echo "Bumped to v${NEW_VERSION} (build ${NEW_BUILD})"
 
       - name: Build
-        run: swift build -c release
+        run: swift build -c release --arch arm64 --arch x86_64
 
       - name: Test
         run: swift test --parallel
@@ -73,7 +73,8 @@ jobs:
       - name: Bundle app
         run: |
           mkdir -p KeepAwake.app/Contents/MacOS KeepAwake.app/Contents/Resources
-          cp .build/release/KeepAwake KeepAwake.app/Contents/MacOS/
+          cp .build/apple/Products/Release/KeepAwake KeepAwake.app/Contents/MacOS/
+          lipo -archs KeepAwake.app/Contents/MacOS/KeepAwake
           cp Sources/KeepAwake/Resources/Info.plist KeepAwake.app/Contents/
           cp Icon.icns KeepAwake.app/Contents/Resources/AppIcon.icns 2>/dev/null || true
           codesign --force --deep --sign - KeepAwake.app
