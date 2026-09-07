@@ -44,6 +44,16 @@ final class SettingsStoreTests: XCTestCase {
         XCTAssertEqual(store.manualInterval, 60)
     }
 
+    func testManualIntervalClampsLow() {
+        store.manualInterval = 1
+        XCTAssertEqual(store.manualInterval, 10)
+    }
+
+    func testManualIntervalClampsHigh() {
+        store.manualInterval = 500
+        XCTAssertEqual(store.manualInterval, 300)
+    }
+
     func testSkipWhenUserActiveDefaultsToFalse() {
         XCTAssertFalse(store.skipWhenUserActive)
     }
