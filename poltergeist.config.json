@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "projectType": "swift",
+  "targets": [
+    {
+      "name": "keepawake",
+      "type": "executable",
+      "enabled": true,
+      "buildCommand": "swift build -c release",
+      "outputPath": "./.build/release/KeepAwake",
+      "watchPaths": ["Sources/**/*.swift", "Package.swift"]
+    }
+  ]
+}
